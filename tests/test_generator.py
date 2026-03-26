@@ -2,7 +2,6 @@
 
 import io
 import os
-import shutil
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,9 +10,6 @@ from pydub.generators import Sine
 
 from telephonia.config import SVIMessage
 from telephonia.generator import SVIGenerator, _get_api_key
-
-has_ffmpeg = shutil.which("ffmpeg") is not None
-requires_ffmpeg = pytest.mark.skipif(not has_ffmpeg, reason="ffmpeg non installe")
 
 
 @pytest.fixture
@@ -54,9 +50,7 @@ class TestSVIGenerator:
         result = generator.generate_message(message)
 
         assert result["name"] == "test"
-        assert os.path.exists(result["mp3"])
         assert os.path.exists(result["wav"])
-        assert result["mp3"].endswith(".mp3")
         assert result["wav"].endswith(".wav")
         mock_tts.synthesize.assert_called_once_with("Bonjour")
 
@@ -75,7 +69,6 @@ class TestSVIGenerator:
         result = generator.generate_message(message)
 
         assert result["name"] == "attente"
-        assert os.path.exists(result["mp3"])
         assert os.path.exists(result["wav"])
 
     def test_generate_message_creates_output_dir(self, mock_tts, tmp_path):
@@ -126,9 +119,7 @@ class TestSVIGenerator:
         results = generator.generate_all(messages=messages)
 
         for result in results:
-            assert os.path.exists(result["mp3"])
             assert os.path.exists(result["wav"])
-            assert os.path.getsize(result["mp3"]) > 0
             assert os.path.getsize(result["wav"]) > 0
 
     def test_wav_is_telephony_format(self, mock_tts, tmp_path):

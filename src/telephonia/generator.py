@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 from telephonia.config import SVIMessage, get_default_messages
-from telephonia.mixer import export_audio, export_telephony, mix_voice_with_music
+from telephonia.mixer import export_telephony, mix_voice_with_music
 from telephonia.tts import ElevenLabsTTS
 
 
@@ -38,7 +38,7 @@ class SVIGenerator:
 
         Returns:
             Dictionnaire avec les chemins des fichiers generes :
-            {"name": str, "mp3": str, "wav": str}
+            {"name": str, "wav": str}
         """
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -62,18 +62,11 @@ class SVIGenerator:
 
             mixed = AudioSegment.from_file(io.BytesIO(voice_audio), format=self.voice_format)
 
-        # Export MP3 (ou WAV si ffmpeg absent) et WAV telephonie
-        mp3_path = os.path.join(self.output_dir, f"{message.name}.mp3")
+        # Export WAV telephonie (LPCM16 16kHz mono 16bit)
         wav_path = os.path.join(self.output_dir, f"{message.name}.wav")
-
-        try:
-            export_audio(mixed, mp3_path, format="mp3")
-        except Exception:
-            # Fallback WAV si ffmpeg n'est pas installe
-            export_audio(mixed, mp3_path, format="wav")
         export_telephony(mixed, wav_path)
 
-        return {"name": message.name, "mp3": mp3_path, "wav": wav_path}
+        return {"name": message.name, "wav": wav_path}
 
     def generate_all(self, messages: list[SVIMessage] | None = None) -> list[dict]:
         """Genere tous les messages SVI.
@@ -91,7 +84,7 @@ class SVIGenerator:
         for message in messages:
             result = self.generate_message(message)
             results.append(result)
-            print(f"  [OK] {message.name} -> {result['mp3']}")
+            print(f"  [OK] {message.name} -> {result['wav']}")
 
         return results
 
@@ -107,7 +100,7 @@ def _get_api_key() -> str:
     """
     try:
         result = subprocess.run(
-            ["security", "find-generic-password", "-s", "elevenlabs_api_key", "-w"],
+            ["security", "find-generic-password", "-l", "elevenlabs_api_key", "-w"],
             capture_output=True,
             text=True,
             check=True,
@@ -155,7 +148,7 @@ def main():
 
     print(f"\n{len(results)} messages generes avec succes.")
     for r in results:
-        print(f"  - {r['name']}: {r['mp3']} / {r['wav']}")
+        print(f"  - {r['name']}: {r['wav']}")
 
 
 if __name__ == "__main__":
