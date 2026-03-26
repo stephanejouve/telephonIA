@@ -120,6 +120,22 @@ poetry run isort src/ tests/ --profile black --line-length=100
 poetry run ruff check src/
 ```
 
+## Convertisseur G.729 -> WAV
+
+Outil integre pour convertir des fichiers G.729 (VoIP) en WAV telephonie.
+
+```bash
+# Via Python (multiplateforme — macOS / Windows / Linux)
+poetry run g729towav
+
+# Via script shell (macOS / Linux uniquement)
+./scripts/g729towav.sh fichier.g729              # un fichier
+./scripts/g729towav.sh *.g729                    # batch
+```
+
+Le CLI Python propose la conversion unitaire ou batch (dossier entier).
+Sortie : WAV 16 kHz, mono, 16 bits.
+
 ## Configuration des messages
 
 Les textes par defaut sont dans `src/telephonia/config.py`.

@@ -9,6 +9,7 @@ packages = [{include = "telephonia", from = "src"}]
 
 [tool.poetry.scripts]
 telephonia = "telephonia.generator:main"
+g729towav = "telephonia.converter:main"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
