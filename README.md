@@ -69,6 +69,27 @@ cp votre_musique.mp3 assets/musique_fond.mp3
 poetry run telephonia
 ```
 
+Le CLI propose deux modes :
+1. **Textes par defaut** — messages pre-configures (Les Saveurs du Terroir)
+2. **Saisie manuelle** — formulaire interactif pour saisir les 3 textes
+
+### Musique de fond
+
+Placer un fichier MP3 dans `assets/musique_fond.mp3`. Il sera mixe
+automatiquement avec le message d'attente a -15 dB.
+
+Sources de musiques libres de droits recommandees :
+
+| Site | Recherche suggeree |
+|------|--------------------|
+| [pixabay.com/music](https://pixabay.com/music/) | "corporate background", "hold music" |
+| [incompetech.com](https://incompetech.com/) | Musiques de Kevin MacLeod |
+| [mixkit.co/free-music](https://mixkit.co/free-music/) | Filtre par mood |
+| [freemusicarchive.org](https://freemusicarchive.org/) | Catalogue pro |
+
+Privilegier une musique **neutre, sans voix, sans rythme trop marque** (2-3 min
+minimum, le script la boucle automatiquement si elle est trop courte).
+
 Les fichiers sont generes dans `output/` au format standard telephonie :
 - **WAV** — LPCM16 @ 16 kHz, mono, 16 bit (< 8 Mo, < 2 min)
 
@@ -101,17 +122,8 @@ poetry run ruff check src/
 
 ## Configuration des messages
 
-Les textes SVI sont definis dans `src/telephonia/config.py`. Pour les modifier :
-
-1. Editer `get_default_messages()` dans `config.py`
-2. Relancer `poetry run telephonia`
-
-Chaque message est un `SVIMessage` avec :
-- `name` — identifiant du fichier de sortie
-- `text` — texte a synthetiser
-- `target_duration` — duree cible (secondes)
-- `background_music` — chemin musique de fond (optionnel)
-- `music_volume_db` — volume musique en dB (defaut: -15)
+Les textes par defaut sont dans `src/telephonia/config.py`.
+Pour une saisie ponctuelle, utiliser le mode 2 (saisie manuelle) du CLI.
 
 ## Voix
 
