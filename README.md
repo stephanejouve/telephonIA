@@ -20,7 +20,7 @@ Societe fictive **Les Saveurs du Terroir** (epicerie fine en ligne) avec 3 messa
 - Python >= 3.11
 - [Poetry](https://python-poetry.org/)
 - [ffmpeg](https://ffmpeg.org/) (utilise par pydub)
-- Cle API [ElevenLabs](https://elevenlabs.io/) dans le trousseau macOS
+- Cle API [ElevenLabs](https://elevenlabs.io/) dans le trousseau systeme
 
 ### Installation de ffmpeg
 
@@ -28,17 +28,28 @@ Societe fictive **Les Saveurs du Terroir** (epicerie fine en ligne) avec 3 messa
 # macOS
 brew install ffmpeg
 
+# Windows
+winget install ffmpeg
+# ou : choco install ffmpeg
+
 # Ubuntu/Debian
 sudo apt-get install ffmpeg
 ```
 
 ### Ajout de la cle API au trousseau
 
-```bash
-security add-generic-password -l "elevenlabs_api_key" -a "telephonia" -s "elevenlabs_api_key" -w "VOTRE_CLE_API"
-```
+La cle est stockee via [keyring](https://pypi.org/project/keyring/) (multiplateforme) :
+- **macOS** : Trousseau d'acces (Keychain)
+- **Windows** : Credential Manager
+- **Linux** : Secret Service (GNOME Keyring / KWallet)
 
-La cle est lue via `security find-generic-password -l "elevenlabs_api_key" -w`.
+```bash
+# Methode universelle (macOS / Windows / Linux)
+keyring set elevenlabs_api_key telephonia
+
+# Ou via Python
+python -c "import keyring; keyring.set_password('elevenlabs_api_key', 'telephonia', 'VOTRE_CLE')"
+```
 
 ## Installation
 

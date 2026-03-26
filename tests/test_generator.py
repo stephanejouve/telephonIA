@@ -139,16 +139,15 @@ class TestSVIGenerator:
 class TestGetApiKey:
     """Tests pour _get_api_key."""
 
-    @patch("telephonia.generator.subprocess.run")
-    def test_get_api_key_success(self, mock_run):
-        mock_run.return_value = MagicMock(stdout="my-secret-key\n")
+    @patch("telephonia.generator.keyring.get_password")
+    def test_get_api_key_success(self, mock_get):
+        mock_get.return_value = "my-secret-key"
         key = _get_api_key()
         assert key == "my-secret-key"
+        mock_get.assert_called_once_with("elevenlabs_api_key", "telephonia")
 
-    @patch("telephonia.generator.subprocess.run")
-    def test_get_api_key_not_found(self, mock_run):
-        import subprocess
-
-        mock_run.side_effect = subprocess.CalledProcessError(1, "security")
+    @patch("telephonia.generator.keyring.get_password")
+    def test_get_api_key_not_found(self, mock_get):
+        mock_get.return_value = None
         with pytest.raises(SystemExit):
             _get_api_key()

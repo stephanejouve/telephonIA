@@ -1,8 +1,9 @@
 """Orchestrateur : generation complete des messages SVI."""
 
 import os
-import subprocess
 import sys
+
+import keyring
 
 from telephonia.config import SVIMessage, get_default_messages
 from telephonia.mixer import export_telephony, mix_voice_with_music
@@ -90,7 +91,12 @@ class SVIGenerator:
 
 
 def _get_api_key() -> str:
-    """Recupere la cle API ElevenLabs depuis le trousseau macOS.
+    """Recupere la cle API ElevenLabs depuis le trousseau systeme.
+
+    Utilise keyring (multiplateforme) :
+    - macOS : Trousseau d'acces (Keychain)
+    - Windows : Credential Manager
+    - Linux : Secret Service (GNOME Keyring / KWallet)
 
     Returns:
         La cle API.
@@ -98,21 +104,14 @@ def _get_api_key() -> str:
     Raises:
         SystemExit: Si la cle n'est pas trouvee dans le trousseau.
     """
-    try:
-        result = subprocess.run(
-            ["security", "find-generic-password", "-l", "elevenlabs_api_key", "-w"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        print("Erreur : cle API ElevenLabs introuvable dans le trousseau macOS.")
-        print("Ajoutez-la avec :")
-        print(
-            '  security add-generic-password -s "elevenlabs_api_key" -a "telephonia" -w "VOTRE_CLE"'
-        )
-        sys.exit(1)
+    api_key = keyring.get_password("elevenlabs_api_key", "telephonia")
+    if api_key:
+        return api_key
+
+    print("Erreur : cle API ElevenLabs introuvable dans le trousseau systeme.")
+    print("Ajoutez-la avec :")
+    print("  keyring set elevenlabs_api_key telephonia")
+    sys.exit(1)
 
 
 def main():

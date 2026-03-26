@@ -14,6 +14,7 @@ telephonia = "telephonia.generator:main"
 python = ">=3.11,<4.0"
 requests = ">=2.31"
 pydub = ">=0.25"
+keyring = ">=25.0"
 audioop-lts = {version = ">=0.2.1", python = ">=3.13"}
 
 [tool.poetry.group.dev.dependencies]
