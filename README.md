@@ -35,13 +35,15 @@ sudo apt-get install ffmpeg
 ### Ajout de la cle API au trousseau
 
 ```bash
-security add-generic-password -s "elevenlabs_api_key" -a "telephonia" -w "VOTRE_CLE_API"
+security add-generic-password -l "elevenlabs_api_key" -a "telephonia" -s "elevenlabs_api_key" -w "VOTRE_CLE_API"
 ```
+
+La cle est lue via `security find-generic-password -l "elevenlabs_api_key" -w`.
 
 ## Installation
 
 ```bash
-git clone <url-du-repo>
+git clone https://github.com/stephanejouve/telephonIA.git
 cd telephonIA
 poetry install
 ```
@@ -56,9 +58,21 @@ cp votre_musique.mp3 assets/musique_fond.mp3
 poetry run telephonia
 ```
 
-Les fichiers sont generes dans `output/` en deux formats :
-- **MP3** (192 kbps) — pour ecoute et archivage
-- **WAV** (16 kHz, mono, 16 bit) — format standard telephonie
+Les fichiers sont generes dans `output/` au format standard telephonie :
+- **WAV** — LPCM16 @ 16 kHz, mono, 16 bit (< 8 Mo, < 2 min)
+
+## Format de sortie
+
+Le format WAV produit est directement compatible avec les serveurs SVI :
+
+| Spec | Valeur |
+|------|--------|
+| Format | WAV (LPCM) |
+| Frequence | 16 000 Hz |
+| Canaux | Mono |
+| Resolution | 16 bits |
+| Poids max | < 8 Mo |
+| Duree max | < 2 min |
 
 ## Developpement
 
@@ -73,6 +87,27 @@ poetry run isort src/ tests/ --profile black --line-length=100
 # Lint
 poetry run ruff check src/
 ```
+
+## Configuration des messages
+
+Les textes SVI sont definis dans `src/telephonia/config.py`. Pour les modifier :
+
+1. Editer `get_default_messages()` dans `config.py`
+2. Relancer `poetry run telephonia`
+
+Chaque message est un `SVIMessage` avec :
+- `name` — identifiant du fichier de sortie
+- `text` — texte a synthetiser
+- `target_duration` — duree cible (secondes)
+- `background_music` — chemin musique de fond (optionnel)
+- `music_volume_db` — volume musique en dB (defaut: -15)
+
+## Voix
+
+Voix par defaut : **Charlotte** (ElevenLabs, francais).
+Pour changer de voix, modifier `voice_id` dans `generator.py`.
+
+Voix FR recommandees : Charlotte, Mathieu.
 
 ## Licence
 
