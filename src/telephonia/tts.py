@@ -19,6 +19,10 @@ class VoiceNotFoundError(TTSError):
     """Voix introuvable (404)."""
 
 
+class NetworkError(TTSError):
+    """Erreur reseau (connexion, timeout)."""
+
+
 class ElevenLabsTTS:
     """Client pour l'API ElevenLabs Text-to-Speech.
 
@@ -56,6 +60,7 @@ class ElevenLabsTTS:
             Contenu audio MP3 en bytes.
 
         Raises:
+            NetworkError: Si la connexion echoue ou timeout.
             RateLimitError: Si le rate limit est atteint (429).
             QuotaExceededError: Si le quota est depasse (401).
             VoiceNotFoundError: Si la voix est introuvable (404).
@@ -71,7 +76,14 @@ class ElevenLabsTTS:
             },
         }
 
-        response = requests.post(url, json=payload, headers=self._headers(), timeout=60)
+        try:
+            response = requests.post(url, json=payload, headers=self._headers(), timeout=60)
+        except requests.exceptions.ConnectionError as exc:
+            raise NetworkError(
+                "Connexion au serveur ElevenLabs impossible. Verifiez votre connexion."
+            ) from exc
+        except requests.exceptions.Timeout as exc:
+            raise NetworkError("Timeout lors de l'appel a ElevenLabs.") from exc
 
         if response.status_code == 429:
             raise RateLimitError("Rate limit atteint. Reessayez plus tard.")

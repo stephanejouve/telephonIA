@@ -1,13 +1,23 @@
 """Orchestrateur : generation complete des messages SVI."""
 
+import io
+import logging
 import os
 import sys
 
 import keyring
+from pydub import AudioSegment
 
 from telephonia.config import SVIMessage, get_default_messages
 from telephonia.mixer import export_telephony, mix_voice_with_music
-from telephonia.tts import ElevenLabsTTS
+from telephonia.tts import TTSError
+from telephonia.tts_provider import TTSProvider, create_tts_provider
+
+logger = logging.getLogger(__name__)
+
+
+class GenerationError(Exception):
+    """Erreur lors de la generation d'un message SVI."""
 
 
 class SVIGenerator:
@@ -21,7 +31,7 @@ class SVIGenerator:
 
     def __init__(
         self,
-        tts: ElevenLabsTTS,
+        tts: TTSProvider,
         music_path: str | None,
         output_dir: str,
         voice_format: str = "mp3",
@@ -30,6 +40,40 @@ class SVIGenerator:
         self.music_path = music_path
         self.output_dir = output_dir
         self.voice_format = voice_format
+
+    def _process_audio(self, message: SVIMessage, voice_audio: bytes) -> dict:
+        """Mixe et exporte un audio voix en WAV telephonie.
+
+        Args:
+            message: Configuration du message SVI.
+            voice_audio: Contenu audio voix en bytes.
+
+        Returns:
+            Dictionnaire {"name": str, "wav": str}.
+
+        Raises:
+            GenerationError: Si le mixage ou l'export echoue.
+        """
+        try:
+            if message.background_music:
+                mixed = mix_voice_with_music(
+                    voice_audio,
+                    message.background_music,
+                    music_volume_db=message.music_volume_db,
+                    voice_format=self.voice_format,
+                )
+            else:
+                mixed = AudioSegment.from_file(io.BytesIO(voice_audio), format=self.voice_format)
+        except (FileNotFoundError, IOError) as exc:
+            raise GenerationError(f"Mixage echoue pour '{message.name}' : {exc}") from exc
+
+        wav_path = os.path.join(self.output_dir, f"{message.name}.wav")
+        try:
+            export_telephony(mixed, wav_path)
+        except IOError as exc:
+            raise GenerationError(f"Export echoue pour '{message.name}' : {exc}") from exc
+
+        return {"name": message.name, "wav": wav_path}
 
     def generate_message(self, message: SVIMessage) -> dict:
         """Genere un message SVI complet (TTS + mix optionnel + export).
@@ -40,57 +84,54 @@ class SVIGenerator:
         Returns:
             Dictionnaire avec les chemins des fichiers generes :
             {"name": str, "wav": str}
+
+        Raises:
+            GenerationError: Si la synthese, le mixage ou l'export echoue.
         """
         os.makedirs(self.output_dir, exist_ok=True)
 
-        # Synthese vocale
-        voice_audio = self.tts.synthesize(message.text)
+        try:
+            voice_audio = self.tts.synthesize(message.text)
+        except TTSError as exc:
+            raise GenerationError(f"Synthese vocale echouee pour '{message.name}' : {exc}") from exc
 
-        # Mix avec musique si configure
-        if message.background_music:
-            from pydub import AudioSegment
-
-            mixed = mix_voice_with_music(
-                voice_audio,
-                message.background_music,
-                music_volume_db=message.music_volume_db,
-                voice_format=self.voice_format,
-            )
-        else:
-            import io
-
-            from pydub import AudioSegment
-
-            mixed = AudioSegment.from_file(io.BytesIO(voice_audio), format=self.voice_format)
-
-        # Export WAV telephonie (LPCM16 16kHz mono 16bit)
-        wav_path = os.path.join(self.output_dir, f"{message.name}.wav")
-        export_telephony(mixed, wav_path)
-
-        return {"name": message.name, "wav": wav_path}
+        return self._process_audio(message, voice_audio)
 
     def generate_all(self, messages: list[SVIMessage] | None = None) -> list[dict]:
-        """Genere tous les messages SVI.
+        """Genere tous les messages SVI avec batch TTS.
 
         Args:
             messages: Liste de messages a generer. Si None, utilise les messages par defaut.
 
         Returns:
-            Liste de dictionnaires avec les chemins des fichiers generes.
+            Liste de dictionnaires avec les chemins des fichiers generes
+            ou les erreurs par message.
         """
         if messages is None:
             messages = get_default_messages(music_path=self.music_path)
 
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        texts = [m.text for m in messages]
+        try:
+            all_audio = self.tts.synthesize_batch(texts)
+        except TTSError as exc:
+            raise GenerationError(f"Synthese batch echouee : {exc}") from exc
+
         results = []
-        for message in messages:
-            result = self.generate_message(message)
-            results.append(result)
-            print(f"  [OK] {message.name} -> {result['wav']}")
+        for message, audio_or_error in zip(messages, all_audio):
+            if isinstance(audio_or_error, Exception):
+                logger.error("[ERREUR] %s : %s", message.name, audio_or_error)
+                results.append({"name": message.name, "error": str(audio_or_error)})
+            else:
+                result = self._process_audio(message, audio_or_error)
+                results.append(result)
+                logger.info("[OK] %s -> %s", message.name, result["wav"])
 
         return results
 
 
-def _get_api_key() -> str:
+def get_api_key() -> str:
     """Recupere la cle API ElevenLabs depuis le trousseau systeme.
 
     Utilise keyring (multiplateforme) :
@@ -108,6 +149,7 @@ def _get_api_key() -> str:
     if api_key:
         return api_key
 
+    logger.warning("Cle API ElevenLabs introuvable dans le trousseau systeme.")
     print("Erreur : cle API ElevenLabs introuvable dans le trousseau systeme.")
     print("Ajoutez-la avec :")
     print("  keyring set elevenlabs_api_key telephonia")
@@ -182,11 +224,10 @@ def main():
     print("telephonIA — Generateur de bandes sonores SVI")
     print("=" * 50)
 
-    # Recuperer la cle API
-    api_key = _get_api_key()
+    # Selectionner le provider TTS
+    tts_provider = create_tts_provider()
 
     # Configuration
-    voice_id = "XB0fDUnXU5powFXDhCwa"  # Charlotte (voix FR)
     music_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "musique_fond.mp3")
     output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "output")
 
@@ -229,8 +270,12 @@ def main():
         sys.exit(0)
 
     # Generation
-    tts = ElevenLabsTTS(api_key=api_key, voice_id=voice_id)
-    generator = SVIGenerator(tts=tts, music_path=music_path, output_dir=output_dir)
+    generator = SVIGenerator(
+        tts=tts_provider,
+        music_path=music_path,
+        output_dir=output_dir,
+        voice_format=tts_provider.voice_format,
+    )
 
     print("\nGeneration des messages SVI...\n")
 

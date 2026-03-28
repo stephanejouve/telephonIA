@@ -28,5 +28,15 @@ output/
 *.wav
 !assets/.gitkeep
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+src/telephonia/web/static/*
+!src/telephonia/web/static/.gitkeep
+
+# PyInstaller
+scripts/ffmpeg/
+*.spec.bak
+
 # Environment
 .env

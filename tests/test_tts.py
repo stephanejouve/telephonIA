@@ -3,9 +3,11 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from telephonia.tts import (
     ElevenLabsTTS,
+    NetworkError,
     QuotaExceededError,
     RateLimitError,
     TTSError,
@@ -108,6 +110,20 @@ class TestElevenLabsTTS:
 
         with pytest.raises(TTSError):
             tts.list_voices()
+
+    @patch("telephonia.tts.requests.post")
+    def test_synthesize_connection_error(self, mock_post, tts):
+        mock_post.side_effect = requests.exceptions.ConnectionError("Connection refused")
+
+        with pytest.raises(NetworkError, match="Connexion au serveur ElevenLabs"):
+            tts.synthesize("Bonjour")
+
+    @patch("telephonia.tts.requests.post")
+    def test_synthesize_timeout(self, mock_post, tts):
+        mock_post.side_effect = requests.exceptions.Timeout("Request timed out")
+
+        with pytest.raises(NetworkError, match="Timeout"):
+            tts.synthesize("Bonjour")
 
     def test_headers(self, tts):
         headers = tts._headers()

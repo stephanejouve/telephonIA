@@ -1,0 +1,214 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a237e, #3949ab);
+  border-radius: 12px;
+  color: white;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.header p {
+  margin-top: 8px;
+  opacity: 0.85;
+  font-size: 0.95rem;
+}
+
+/* Message Card */
+.message-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3949ab;
+}
+
+.message-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  color: #1a237e;
+}
+
+.message-card .description {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.message-card .badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e8eaf6;
+  color: #3949ab;
+  margin-left: 8px;
+}
+
+.message-card textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.message-card textarea:focus {
+  outline: none;
+  border-color: #3949ab;
+  box-shadow: 0 0 0 2px rgba(57, 73, 171, 0.2);
+}
+
+.message-card .actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btn-save {
+  padding: 6px 16px;
+  background: #3949ab;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-save:hover {
+  background: #1a237e;
+}
+
+.btn-save:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+}
+
+.modified-indicator {
+  font-size: 0.8rem;
+  color: #e65100;
+  font-style: italic;
+}
+
+.save-ok {
+  font-size: 0.8rem;
+  color: #2e7d32;
+}
+
+.audio-player {
+  margin-top: 12px;
+}
+
+.audio-player audio {
+  width: 100%;
+  height: 36px;
+}
+
+.no-audio {
+  font-size: 0.8rem;
+  color: #999;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* Generate Button */
+.generate-section {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.btn-generate {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #1a237e, #3949ab);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: transform 0.1s;
+}
+
+.btn-generate:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
+}
+
+.btn-generate:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.generate-result {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.generate-result.success {
+  color: #2e7d32;
+}
+
+.generate-result.error {
+  color: #c62828;
+}
+
+/* Error banner */
+.error-banner {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}

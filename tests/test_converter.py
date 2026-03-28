@@ -1,7 +1,6 @@
 """Tests pour le module converter."""
 
 import os
-import struct
 import wave
 from unittest.mock import patch
 
