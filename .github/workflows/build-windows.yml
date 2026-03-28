@@ -1,0 +1,55 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install Python dependencies
+        run: poetry install --no-interaction
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Copy static files
+        run: |
+          if (!(Test-Path "src\telephonia\web\static")) { mkdir "src\telephonia\web\static" }
+          Copy-Item -Recurse -Force "frontend\dist\*" "src\telephonia\web\static\"
+
+      - name: Build exe with PyInstaller
+        run: poetry run python scripts/build_bundle.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: telephonIA-windows
+          path: dist/telephonIA.exe
+          retention-days: 90
