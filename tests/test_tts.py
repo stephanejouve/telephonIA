@@ -17,7 +17,7 @@ from telephonia.tts import (
 
 @pytest.fixture
 def tts():
-    return ElevenLabsTTS(api_key="test-key", voice_id="test-voice-id")
+    return ElevenLabsTTS(api_key="test-key", voice_id="test-voice-id", base_delay=0.0)
 
 
 class TestElevenLabsTTS:

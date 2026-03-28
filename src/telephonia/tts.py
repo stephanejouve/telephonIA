@@ -1,6 +1,12 @@
 """Client ElevenLabs Text-to-Speech."""
 
+import logging
+import random
+import time
+
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class TTSError(Exception):
@@ -23,6 +29,9 @@ class NetworkError(TTSError):
     """Erreur reseau (connexion, timeout)."""
 
 
+_RETRYABLE = (RateLimitError, NetworkError)
+
+
 class ElevenLabsTTS:
     """Client pour l'API ElevenLabs Text-to-Speech.
 
@@ -30,6 +39,8 @@ class ElevenLabsTTS:
         api_key: Cle API ElevenLabs.
         voice_id: Identifiant de la voix a utiliser.
         model: Modele TTS (defaut: eleven_multilingual_v2).
+        max_retries: Nombre maximum de tentatives apres echec (defaut: 3).
+        base_delay: Delai de base en secondes pour le backoff exponentiel (defaut: 1.0).
     """
 
     BASE_URL = "https://api.elevenlabs.io"
@@ -39,10 +50,14 @@ class ElevenLabsTTS:
         api_key: str,
         voice_id: str,
         model: str = "eleven_multilingual_v2",
+        max_retries: int = 3,
+        base_delay: float = 1.0,
     ):
         self.api_key = api_key
         self.voice_id = voice_id
         self.model = model
+        self.max_retries = max_retries
+        self.base_delay = base_delay
 
     def _headers(self) -> dict:
         return {
@@ -50,8 +65,8 @@ class ElevenLabsTTS:
             "Content-Type": "application/json",
         }
 
-    def synthesize(self, text: str) -> bytes:
-        """Synthetise du texte en audio MP3.
+    def _call_api(self, text: str) -> bytes:
+        """Appel HTTP a l'API ElevenLabs (sans retry).
 
         Args:
             text: Texte a convertir en voix.
@@ -95,6 +110,45 @@ class ElevenLabsTTS:
             raise TTSError(f"Erreur API ElevenLabs: {response.status_code} - {response.text}")
 
         return response.content
+
+    def synthesize(self, text: str) -> bytes:
+        """Synthetise du texte en audio MP3 avec retry sur erreurs transitoires.
+
+        Retente automatiquement sur RateLimitError et NetworkError avec
+        backoff exponentiel + jitter. Les autres erreurs echouent immediatement.
+
+        Args:
+            text: Texte a convertir en voix.
+
+        Returns:
+            Contenu audio MP3 en bytes.
+
+        Raises:
+            NetworkError: Si la connexion echoue apres toutes les tentatives.
+            RateLimitError: Si le rate limit persiste apres toutes les tentatives.
+            QuotaExceededError: Si le quota est depasse (401).
+            VoiceNotFoundError: Si la voix est introuvable (404).
+            TTSError: Pour toute autre erreur API.
+        """
+        last_error = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                return self._call_api(text)
+            except _RETRYABLE as exc:
+                last_error = exc
+                if attempt < self.max_retries:
+                    delay = self.base_delay * (2**attempt) + random.uniform(
+                        0, self.base_delay * 0.5
+                    )
+                    logger.warning(
+                        "Tentative %d/%d echouee (%s), retry dans %.1fs",
+                        attempt + 1,
+                        self.max_retries + 1,
+                        type(exc).__name__,
+                        delay,
+                    )
+                    time.sleep(delay)
+        raise last_error
 
     def list_voices(self) -> list[dict]:
         """Liste les voix disponibles.
