@@ -1,8 +1,11 @@
 """Mixage audio : voix + musique de fond."""
 
 import io
+import logging
 
 from pydub import AudioSegment
+
+logger = logging.getLogger(__name__)
 
 
 def mix_voice_with_music(
@@ -28,9 +31,20 @@ def mix_voice_with_music(
 
     Returns:
         AudioSegment du mix final.
+
+    Raises:
+        FileNotFoundError: Si le fichier musique est introuvable.
     """
     voice = AudioSegment.from_file(io.BytesIO(voice_audio), format=voice_format)
-    music = AudioSegment.from_file(music_path)
+
+    try:
+        music = AudioSegment.from_file(music_path)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Fichier musique introuvable : {music_path}")
+    except Exception as exc:
+        raise FileNotFoundError(
+            f"Impossible de lire le fichier musique '{music_path}' : {exc}"
+        ) from exc
 
     # Boucler la musique si elle est plus courte que la voix
     voice_duration = len(voice)
@@ -64,8 +78,14 @@ def export_audio(
 
     Returns:
         Chemin du fichier exporte.
+
+    Raises:
+        IOError: Si l'ecriture du fichier echoue.
     """
-    audio.export(output_path, format=format, bitrate=bitrate)
+    try:
+        audio.export(output_path, format=format, bitrate=bitrate)
+    except (IOError, OSError) as exc:
+        raise IOError(f"Impossible d'ecrire le fichier audio '{output_path}' : {exc}") from exc
     return output_path
 
 
@@ -78,7 +98,15 @@ def export_telephony(audio: AudioSegment, output_path: str) -> str:
 
     Returns:
         Chemin du fichier exporte.
+
+    Raises:
+        IOError: Si l'ecriture du fichier echoue.
     """
     telephony_audio = audio.set_frame_rate(16000).set_channels(1).set_sample_width(2)
-    telephony_audio.export(output_path, format="wav")
+    try:
+        telephony_audio.export(output_path, format="wav")
+    except (IOError, OSError) as exc:
+        raise IOError(
+            f"Impossible d'exporter en format telephonie '{output_path}' : {exc}"
+        ) from exc
     return output_path

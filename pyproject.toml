@@ -9,6 +9,7 @@ packages = [{include = "telephonia", from = "src"}]
 
 [tool.poetry.scripts]
 telephonia = "telephonia.generator:main"
+telephonia-web = "telephonia.web.app:main"
 g729towav = "telephonia.converter:main"
 
 [tool.poetry.dependencies]
@@ -16,6 +17,9 @@ python = ">=3.11,<4.0"
 requests = ">=2.31"
 pydub = ">=0.25"
 keyring = ">=25.0"
+fastapi = ">=0.115"
+uvicorn = {version = ">=0.34", extras = ["standard"]}
+edge-tts = ">=6.1"
 audioop-lts = {version = ">=0.2.1", python = ">=3.13"}
 
 [tool.poetry.group.dev.dependencies]
@@ -24,6 +28,9 @@ pytest-cov = ">=4.0"
 black = ">=24.0"
 ruff = ">=0.4"
 isort = ">=5.12"
+httpx = ">=0.28"
+pre-commit = ">=3.0"
+pyinstaller = {version = ">=6.0", python = ">=3.11,<3.15"}
 
 [build-system]
 requires = ["poetry-core"]

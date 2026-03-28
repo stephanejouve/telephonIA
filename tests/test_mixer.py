@@ -104,6 +104,26 @@ class TestExportAudio:
         assert os.path.exists(result)
 
 
+class TestMixVoiceWithMusicErrors:
+    """Tests d'erreur pour mix_voice_with_music."""
+
+    def test_mix_music_file_missing(self, voice_audio_bytes):
+        """Musique introuvable → FileNotFoundError."""
+        with pytest.raises(FileNotFoundError, match="introuvable"):
+            mix_voice_with_music(
+                voice_audio_bytes, "/chemin/inexistant/musique.mp3", voice_format="wav"
+            )
+
+
+class TestExportTelephonyErrors:
+    """Tests d'erreur pour export_telephony."""
+
+    def test_export_permission_error(self, sample_audio):
+        """Ecriture impossible → IOError."""
+        with pytest.raises((IOError, OSError)):
+            export_telephony(sample_audio, "/chemin/inexistant/output.wav")
+
+
 class TestExportTelephony:
     """Tests pour export_telephony."""
 
