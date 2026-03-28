@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from telephonia.config import SVIMessage, get_default_messages
 from telephonia.generator import MESSAGES_INFO, GenerationError, SVIGenerator
+from telephonia.paths import get_music_path, get_output_dir
 from telephonia.tts_provider import create_tts_provider
 
 logger = logging.getLogger(__name__)
@@ -62,8 +63,8 @@ class AppState:
     """Etat en memoire de l'application."""
 
     def __init__(self):
-        self.music_path = self._find_music_path()
-        self.output_dir = self._find_output_dir()
+        self.music_path = get_music_path()
+        self.output_dir = get_output_dir()
         self.messages: list[SVIMessage] = get_default_messages(music_path=self.music_path)
         self.load_saved_messages()
 
@@ -98,17 +99,6 @@ class AppState:
                     logger.warning("Cle inconnue ignoree : %s", name)
         except (json.JSONDecodeError, PermissionError, OSError) as exc:
             logger.warning("Impossible de charger messages.json : %s", exc)
-
-    @staticmethod
-    def _find_music_path() -> str | None:
-        path = os.path.normpath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets", "musique_fond.mp3")
-        )
-        return path if os.path.exists(path) else None
-
-    @staticmethod
-    def _find_output_dir() -> str:
-        return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "output"))
 
     def _wav_path(self, name: str) -> str:
         """Retourne le chemin WAV pour un nom de message."""

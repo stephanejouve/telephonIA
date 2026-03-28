@@ -2,50 +2,27 @@
 
 import os
 import socket
-import sys
 import webbrowser
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from telephonia.paths import get_ffmpeg_path, get_static_dir
 from telephonia.web.api import router
-
-
-def get_base_path() -> str:
-    """Retourne le chemin de base selon le contexte (dev vs bundle PyInstaller)."""
-    if getattr(sys, "frozen", False):
-        return sys._MEIPASS
-    return os.path.dirname(__file__)
-
-
-def get_static_path() -> str:
-    """Retourne le chemin vers les fichiers statiques (build React)."""
-    return os.path.join(get_base_path(), "static")
-
-
-def get_ffmpeg_path() -> str:
-    """Retourne le chemin ffmpeg selon le contexte.
-
-    En bundle PyInstaller, ffmpeg.exe est embarque dans _MEIPASS.
-    En dev, on utilise le ffmpeg systeme.
-    """
-    if getattr(sys, "frozen", False):
-        return os.path.join(sys._MEIPASS, "ffmpeg.exe")
-    return "ffmpeg"
-
-
-STATIC_DIR = get_static_path()
+from telephonia.web.middleware import LoggingMiddleware
 
 
 def create_app() -> FastAPI:
     """Cree et configure l'application FastAPI."""
     app = FastAPI(title="telephonIA", version="0.1.0")
+    app.add_middleware(LoggingMiddleware)
     app.include_router(router)
 
     # Servir les fichiers statiques (build React) si le dossier existe et contient des fichiers
-    if os.path.isdir(STATIC_DIR) and any(f for f in os.listdir(STATIC_DIR) if f != ".gitkeep"):
-        app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+    static_dir = get_static_dir()
+    if os.path.isdir(static_dir) and any(f for f in os.listdir(static_dir) if f != ".gitkeep"):
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
     return app
 
@@ -67,7 +44,7 @@ def get_lan_ip() -> str:
 
 def _configure_ffmpeg():
     """Configure pydub pour utiliser le ffmpeg embarque si en bundle."""
-    if getattr(sys, "frozen", False):
+    if get_ffmpeg_path() != "ffmpeg":
         from pydub import AudioSegment
 
         ffmpeg = get_ffmpeg_path()

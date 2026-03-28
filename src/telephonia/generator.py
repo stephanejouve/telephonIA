@@ -10,6 +10,7 @@ from pydub import AudioSegment
 
 from telephonia.config import SVIMessage, get_default_messages
 from telephonia.mixer import export_telephony, mix_voice_with_music
+from telephonia.paths import get_music_path, get_output_dir
 from telephonia.tts import TTSError
 from telephonia.tts_provider import TTSProvider, create_tts_provider
 
@@ -228,17 +229,12 @@ def main():
     tts_provider = create_tts_provider()
 
     # Configuration
-    music_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "musique_fond.mp3")
-    output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "output")
+    music_path = get_music_path()
+    output_dir = get_output_dir()
 
-    # Normaliser les chemins
-    music_path = os.path.normpath(music_path)
-    output_dir = os.path.normpath(output_dir)
-
-    if not os.path.exists(music_path):
-        print(f"Info : musique de fond non trouvee ({music_path})")
+    if music_path is None:
+        print("Info : musique de fond non trouvee")
         print("  Les messages seront generes sans musique de fond.")
-        music_path = None
 
     # Choix du mode
     print("\nMode de saisie :")
