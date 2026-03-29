@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.2 (2026-03-29)
+
+### Bug Fixes
+
+- **api**: Desactiver la musique de fond a l'import G.729
+  ([#21](https://github.com/stephanejouve/telephonIA/pull/21),
+  [`0236e41`](https://github.com/stephanejouve/telephonIA/commit/0236e4174a569dd08d91ef8314ec5ef331a9d01f))
+
+
 ## v1.4.1 (2026-03-29)
 
 ### Bug Fixes
