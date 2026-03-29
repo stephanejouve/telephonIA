@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.8 (2026-03-29)
+
+### Bug Fixes
+
+- Import G.729 ne detruit plus la musique de fond
+  ([#27](https://github.com/stephanejouve/telephonIA/pull/27),
+  [`6b4869f`](https://github.com/stephanejouve/telephonIA/commit/6b4869fa190f3bc0d196a2b5c0295a1684813fbb))
+
+
 ## v1.4.7 (2026-03-29)
 
 ### Bug Fixes
