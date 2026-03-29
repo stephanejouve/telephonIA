@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.1 (2026-03-29)
+
+### Bug Fixes
+
+- **api**: Exclure les messages G.729 importes de la generation TTS
+  ([#20](https://github.com/stephanejouve/telephonIA/pull/20),
+  [`38771b5`](https://github.com/stephanejouve/telephonIA/commit/38771b5c39598499e22af7b796c309f07fa6f1e8))
+
+
 ## v1.4.0 (2026-03-29)
 
 ### Features
