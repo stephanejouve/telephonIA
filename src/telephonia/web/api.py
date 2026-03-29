@@ -86,12 +86,14 @@ class AppState:
         return os.path.join(self.output_dir, "messages.json")
 
     def save_messages(self) -> None:
-        """Ecrit les textes des messages et la voix selectionnee en JSON."""
+        """Ecrit les textes, voix, musique et flags en JSON."""
         data = {msg.name: msg.text for msg in self.messages}
         if self.voice_id:
             data["_voice_id"] = self.voice_id
         if self.imported_g729:
             data["_imported_g729"] = sorted(self.imported_g729)
+        # Persister music_path (None = pas de musique)
+        data["_music_path"] = self.music_path
         os.makedirs(self.output_dir, exist_ok=True)
         with open(self._messages_json_path(), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -114,6 +116,14 @@ class AppState:
                     self.voice_id = text
                 elif name == "_imported_g729":
                     self.imported_g729 = set(text) if isinstance(text, list) else set()
+                elif name == "_music_path":
+                    # Restaurer music_path (None = explicitement desactive)
+                    if text is None:
+                        self.music_path = None
+                    elif isinstance(text, str) and os.path.exists(text):
+                        self.music_path = text
+                    else:
+                        self.music_path = None
                 elif name in messages_by_name:
                     messages_by_name[name].text = text
                 else:
@@ -378,8 +388,14 @@ async def upload_audio(name: str, file: UploadFile):
                 ) from exc
             export_telephony(audio, wav_path)
 
-    logger.info("Audio importe pour '%s' (%d octets)", name, len(content))
-    return {"status": "ok", "name": name}
+    logger.info(
+        "Audio importe pour '%s' (ext=%s, %d octets, music_path=%s)",
+        name,
+        ext,
+        len(content),
+        state.music_path,
+    )
+    return {"status": "ok", "name": name, "ext": ext}
 
 
 @router.delete("/audio/{name}")
@@ -404,11 +420,10 @@ def delete_audio(name: str):
 
 @router.get("/music")
 def get_music_status():
-    """Retourne le statut de la musique de fond."""
-    music_path = get_music_path()
+    """Retourne le statut de la musique de fond (depuis le state, pas le disque)."""
     return {
-        "has_music": music_path is not None,
-        "filename": os.path.basename(music_path) if music_path else None,
+        "has_music": state.music_path is not None,
+        "filename": os.path.basename(state.music_path) if state.music_path else None,
     }
 
 
@@ -433,20 +448,23 @@ async def upload_music(file: UploadFile):
         f.write(content)
 
     state.music_path = dest
+    state.save_messages()
     logger.info("Musique uploadee : %s -> %s (%d octets)", file.filename, dest, len(content))
-    logger.info("Verification: fichier existe = %s", os.path.exists(dest))
-    logger.info("get_music_path() apres upload = %s", get_music_path())
     return {"status": "ok", "message": "Musique uploadee"}
 
 
 @router.delete("/music")
 def delete_music():
-    """Supprime la musique de fond uploadee."""
-    upload_dir = get_music_upload_dir()
-    dest = os.path.join(upload_dir, "musique_fond.mp3")
-    if os.path.exists(dest):
-        os.remove(dest)
-        logger.info("Musique de fond supprimee")
-
-    state.music_path = get_music_path()
-    return {"status": "ok", "has_music": state.music_path is not None}
+    """Supprime la musique de fond."""
+    # Supprimer le fichier physique (best-effort dans tous les emplacements)
+    for music_dir in (get_music_upload_dir(), get_assets_dir()):
+        music_file = os.path.join(music_dir, "musique_fond.mp3")
+        try:
+            if os.path.exists(music_file):
+                os.remove(music_file)
+                logger.info("Musique supprimee : %s", music_file)
+        except OSError as exc:
+            logger.warning("Impossible de supprimer %s : %s", music_file, exc)
+    state.music_path = None
+    state.save_messages()
+    return {"status": "ok", "has_music": False}
