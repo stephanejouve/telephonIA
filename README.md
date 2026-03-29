@@ -1,5 +1,7 @@
 # telephonIA
 
+[![GitHub Release](https://img.shields.io/github/v/release/stephanejouve/telephonIA)](https://github.com/stephanejouve/telephonIA/releases/latest)
+
 Generateur de bandes sonores SVI (Serveur Vocal Interactif) par IA.
 
 Automatise la creation de messages telephoniques professionnels via l'API

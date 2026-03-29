@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Python semantic release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v10
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish GitHub Release
+        if: steps.release.outputs.released == 'true'
+        uses: python-semantic-release/publish-action@v10
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
+
+  build-windows:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install Python dependencies
+        run: poetry install --no-interaction
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Copy static files
+        run: |
+          mkdir -p src/telephonia/web/static
+          cp -r frontend/dist/* src/telephonia/web/static/
+
+      - name: Build exe with PyInstaller
+        run: poetry run python scripts/build_bundle.py
+
+      - name: Rename exe with version
+        run: mv dist/telephonIA.exe "dist/telephonIA-${{ needs.release.outputs.version }}-windows.exe"
+
+      - name: Upload exe to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" "dist/telephonIA-${{ needs.release.outputs.version }}-windows.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: telephonIA-windows
+          path: dist/telephonIA-${{ needs.release.outputs.version }}-windows.exe
+          retention-days: 90
