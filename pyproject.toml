@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "telephonia"
-version = "1.4.6"
+version = "1.4.7"
 description = "Generateur de bandes sonores SVI (Serveur Vocal Interactif) par IA via ElevenLabs"
 authors = ["stephanejouve <stephanejouve@users.noreply.github.com>"]
 license = "MIT"

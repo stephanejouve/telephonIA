@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.7 (2026-03-29)
+
+### Bug Fixes
+
+- **api**: Persister music_path dans messages.json (source unique de verite)
+  ([#26](https://github.com/stephanejouve/telephonIA/pull/26),
+  [`666adc3`](https://github.com/stephanejouve/telephonIA/commit/666adc3324ed6c5a063ca4aa22eaeb05937d3297))
+
+
 ## v1.4.6 (2026-03-29)
 
 ### Bug Fixes
