@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.2.1 (2026-03-29)
+
+### Bug Fixes
+
+- Empecher le cache navigateur sur les fichiers audio
+  ([#16](https://github.com/stephanejouve/telephonIA/pull/16),
+  [`3b0aede`](https://github.com/stephanejouve/telephonIA/commit/3b0aede9678265d56b526b313d019d4b5f723113))
+
+
 ## v1.2.0 (2026-03-29)
 
 ### Features
