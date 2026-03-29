@@ -20,11 +20,17 @@ datas = []
 if os.path.isdir(static_dir):
     datas.append((static_dir, "static"))
 
+# Collecter tous les fichiers edge-tts AVANT Analysis
+# pour que les 2-tuples soient normalises par Analysis (et non ajoutes apres)
+from PyInstaller.utils.hooks import collect_all
+
+edge_datas, edge_binaries, edge_hiddenimports = collect_all("edge_tts")
+
 a = Analysis(
     [os.path.join(PROJECT_ROOT, "src", "telephonia", "web", "app.py")],
     pathex=[os.path.join(PROJECT_ROOT, "src")],
-    binaries=binaries,
-    datas=datas,
+    binaries=binaries + edge_binaries,
+    datas=datas + edge_datas,
     hiddenimports=[
         "edge_tts",
         "uvicorn.logging",
@@ -42,7 +48,8 @@ a = Analysis(
         "telephonia.mixer",
         "telephonia.tts",
         "telephonia.tts_provider",
-    ],
+    ]
+    + edge_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -52,14 +59,6 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
-
-# Collecter tous les fichiers edge-tts
-from PyInstaller.utils.hooks import collect_all
-
-edge_datas, edge_binaries, edge_hiddenimports = collect_all("edge_tts")
-a.datas += edge_datas
-a.binaries += edge_binaries
-a.hiddenimports += edge_hiddenimports
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
