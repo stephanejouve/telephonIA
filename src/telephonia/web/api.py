@@ -14,7 +14,7 @@ from telephonia.config import SVIMessage, get_default_messages
 from telephonia.converter import convert_g729_to_wav
 from telephonia.generator import MESSAGES_INFO, GenerationError, SVIGenerator
 from telephonia.mixer import export_telephony, mix_voice_with_music
-from telephonia.paths import get_music_path, get_music_upload_dir, get_output_dir
+from telephonia.paths import get_assets_dir, get_music_path, get_music_upload_dir, get_output_dir
 from telephonia.tts_provider import create_tts_provider
 
 logger = logging.getLogger(__name__)
@@ -336,12 +336,12 @@ async def upload_audio(name: str, file: UploadFile):
         finally:
             os.unlink(tmp_path)
         state.imported_g729.add(name)
-        # Supprimer physiquement la musique uploadee (get_music_path() la retrouverait sinon)
-        upload_dir = get_music_upload_dir()
-        music_file = os.path.join(upload_dir, "musique_fond.mp3")
-        if os.path.exists(music_file):
-            os.remove(music_file)
-            logger.info("Musique de fond supprimee (import G.729)")
+        # Supprimer physiquement la musique dans tous les emplacements possibles
+        for music_dir in (get_music_upload_dir(), get_assets_dir()):
+            music_file = os.path.join(music_dir, "musique_fond.mp3")
+            if os.path.exists(music_file):
+                os.remove(music_file)
+                logger.info("Musique supprimee : %s", music_file)
         state.music_path = None
         state.save_messages()
     else:
