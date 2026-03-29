@@ -95,6 +95,16 @@ body {
   margin-left: 8px;
 }
 
+.message-card .badge-disabled {
+  background: #eee;
+  color: #999;
+  text-decoration: line-through;
+}
+
+.textarea-wrapper {
+  position: relative;
+}
+
 .message-card textarea {
   width: 100%;
   min-height: 80px;
@@ -107,10 +117,26 @@ body {
   line-height: 1.5;
 }
 
+.message-card textarea.imported {
+  color: #999;
+}
+
 .message-card textarea:focus {
   outline: none;
   border-color: #3949ab;
   box-shadow: 0 0 0 2px rgba(57, 73, 171, 0.2);
+}
+
+.textarea-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: rgba(57, 73, 171, 0.35);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .message-card .actions {
@@ -165,6 +191,56 @@ body {
   color: #999;
   font-style: italic;
   margin-top: 8px;
+}
+
+.audio-import {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btn-import {
+  padding: 6px 16px;
+  background: transparent;
+  color: #3949ab;
+  border: 1px solid #3949ab;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-import:hover {
+  background: #e8eaf6;
+}
+
+.btn-import:disabled {
+  color: #bbb;
+  border-color: #bbb;
+  cursor: not-allowed;
+}
+
+.btn-delete-audio {
+  padding: 6px 16px;
+  background: transparent;
+  color: #c62828;
+  border: 1px solid #c62828;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-delete-audio:hover {
+  background: #ffebee;
+}
+
+.btn-delete-audio:disabled {
+  color: #bbb;
+  border-color: #bbb;
+  cursor: not-allowed;
 }
 
 /* Generate Button */
@@ -306,6 +382,58 @@ body {
 }
 
 .music-feedback.error {
+  color: #c62828;
+}
+
+/* Voice Selector */
+.voice-selector {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #2e7d32;
+}
+
+.voice-selector h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  color: #1b5e20;
+}
+
+.voice-provider {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.voice-selector select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+}
+
+.voice-selector select:focus {
+  outline: none;
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+.voice-feedback {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.voice-feedback.success {
+  color: #2e7d32;
+}
+
+.voice-feedback.error {
   color: #c62828;
 }
 

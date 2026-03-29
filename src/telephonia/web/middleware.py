@@ -8,13 +8,23 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = logging.getLogger(__name__)
 
 _SILENT_PATHS = {"/api/health"}
+_STATIC_EXTENSIONS = (".js", ".css", ".ico", ".png", ".svg", ".map", ".woff", ".woff2")
+
+
+def _should_log(path: str) -> bool:
+    """Determine si une requete doit etre loguee."""
+    if path in _SILENT_PATHS:
+        return False
+    if path.startswith("/assets/") or path.endswith(_STATIC_EXTENSIONS):
+        return False
+    return True
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware qui logue chaque requete HTTP avec methode, path, status et duree."""
 
     async def dispatch(self, request, call_next):
-        if request.url.path in _SILENT_PATHS:
+        if not _should_log(request.url.path):
             return await call_next(request)
 
         start = time.monotonic()

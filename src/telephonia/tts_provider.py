@@ -27,6 +27,14 @@ class TTSProvider(ABC):
             Contenu audio en bytes (MP3).
         """
 
+    @abstractmethod
+    def list_voices(self) -> list[dict]:
+        """Liste les voix disponibles pour ce provider.
+
+        Returns:
+            Liste de dictionnaires {"id": str, "name": str}.
+        """
+
     def synthesize_batch(self, texts: list[str]) -> list[bytes]:
         """Synthetise plusieurs textes. Par defaut, appels sequentiels.
 
@@ -60,6 +68,11 @@ class ElevenLabsProvider(TTSProvider):
     def synthesize(self, text: str) -> bytes:
         """Synthetise via l'API ElevenLabs."""
         return self.client.synthesize(text)
+
+    def list_voices(self) -> list[dict]:
+        """Liste les voix ElevenLabs disponibles."""
+        voices = self.client.list_voices()
+        return [{"id": v["voice_id"], "name": v["name"]} for v in voices]
 
 
 class EdgeTTSProvider(TTSProvider):
@@ -113,6 +126,15 @@ class EdgeTTSProvider(TTSProvider):
             raise TTSError("Edge TTS n'a retourne aucun audio.")
         return audio_bytes
 
+    def list_voices(self) -> list[dict]:
+        """Liste les voix Edge TTS francophones (fr-FR)."""
+        all_voices = asyncio.run(edge_tts.list_voices())
+        return [
+            {"id": v["ShortName"], "name": v["FriendlyName"]}
+            for v in all_voices
+            if v.get("Locale") == "fr-FR"
+        ]
+
 
 def get_elevenlabs_key() -> str | None:
     """Tente de recuperer la cle API ElevenLabs depuis le trousseau.
@@ -123,14 +145,14 @@ def get_elevenlabs_key() -> str | None:
     return keyring.get_password("elevenlabs_api_key", "telephonia")
 
 
-def create_tts_provider(voice: str = "fr-FR-DeniseNeural") -> TTSProvider:
+def create_tts_provider(voice: str | None = None) -> TTSProvider:
     """Selectionne automatiquement le provider TTS.
 
     Si une cle ElevenLabs est configuree dans le trousseau, utilise ElevenLabs.
     Sinon, utilise Edge TTS (gratuit).
 
     Args:
-        voice: Voix Edge TTS a utiliser si ElevenLabs n'est pas disponible.
+        voice: Identifiant de la voix a utiliser. Si None, le provider utilise son defaut.
 
     Returns:
         Instance du provider TTS selectionne.
@@ -138,7 +160,11 @@ def create_tts_provider(voice: str = "fr-FR-DeniseNeural") -> TTSProvider:
     api_key = get_elevenlabs_key()
     if api_key:
         logger.info("Provider TTS : ElevenLabs")
+        if voice:
+            return ElevenLabsProvider(api_key=api_key, voice_id=voice)
         return ElevenLabsProvider(api_key=api_key)
 
     logger.info("Provider TTS : EdgeTTS (gratuit)")
-    return EdgeTTSProvider(voice=voice)
+    if voice:
+        return EdgeTTSProvider(voice=voice)
+    return EdgeTTSProvider()

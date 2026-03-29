@@ -11,7 +11,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from telephonia.config import SVIMessage, get_default_messages
+from telephonia.converter import convert_g729_to_wav
 from telephonia.generator import MESSAGES_INFO, GenerationError, SVIGenerator
+from telephonia.mixer import export_telephony, mix_voice_with_music
 from telephonia.paths import get_music_path, get_music_upload_dir, get_output_dir
 from telephonia.tts_provider import create_tts_provider
 
@@ -35,12 +37,19 @@ class MessageResponse(BaseModel):
     text: str
     has_music: bool
     has_audio: bool
+    imported_g729: bool = False
 
 
 class MessageUpdate(BaseModel):
     """Mise a jour du texte d'un message."""
 
     text: str
+
+
+class VoiceUpdate(BaseModel):
+    """Mise a jour de la voix selectionnee."""
+
+    voice_id: str
 
 
 class GenerateResult(BaseModel):
@@ -67,6 +76,8 @@ class AppState:
     def __init__(self):
         self.music_path = get_music_path()
         self.output_dir = get_output_dir()
+        self.voice_id: str | None = None
+        self.imported_g729: set[str] = set()
         self.messages: list[SVIMessage] = get_default_messages(music_path=self.music_path)
         self.load_saved_messages()
 
@@ -75,8 +86,12 @@ class AppState:
         return os.path.join(self.output_dir, "messages.json")
 
     def save_messages(self) -> None:
-        """Ecrit les textes des messages en JSON."""
+        """Ecrit les textes des messages et la voix selectionnee en JSON."""
         data = {msg.name: msg.text for msg in self.messages}
+        if self.voice_id:
+            data["_voice_id"] = self.voice_id
+        if self.imported_g729:
+            data["_imported_g729"] = sorted(self.imported_g729)
         os.makedirs(self.output_dir, exist_ok=True)
         with open(self._messages_json_path(), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -95,7 +110,11 @@ class AppState:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             for name, text in data.items():
-                if name in messages_by_name:
+                if name == "_voice_id":
+                    self.voice_id = text
+                elif name == "_imported_g729":
+                    self.imported_g729 = set(text) if isinstance(text, list) else set()
+                elif name in messages_by_name:
                     messages_by_name[name].text = text
                 else:
                     logger.warning("Cle inconnue ignoree : %s", name)
@@ -131,6 +150,34 @@ def health():
     return {"status": "ok"}
 
 
+@router.get("/voices")
+def get_voices():
+    """Liste les voix disponibles pour le provider TTS actif."""
+    try:
+        provider = create_tts_provider(voice=state.voice_id)
+        voices = provider.list_voices()
+        is_elevenlabs = hasattr(provider, "client")
+        current = state.voice_id
+        if current is None:
+            current = provider.client.voice_id if is_elevenlabs else provider.voice
+        return {
+            "provider": "elevenlabs" if is_elevenlabs else "edge",
+            "current": current,
+            "voices": voices,
+        }
+    except Exception as exc:
+        logger.error("Erreur lors de la recuperation des voix : %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.put("/voice")
+def set_voice(body: VoiceUpdate):
+    """Selectionne la voix TTS a utiliser."""
+    state.voice_id = body.voice_id
+    state.save_messages()
+    return {"status": "ok", "voice_id": state.voice_id}
+
+
 @router.get("/messages", response_model=list[MessageResponse])
 def get_messages():
     """Liste les 3 messages avec textes et metadata."""
@@ -145,6 +192,7 @@ def get_messages():
                 text=msg.text,
                 has_music=info.get("has_music", False),
                 has_audio=os.path.exists(state._wav_path(msg.name)),
+                imported_g729=msg.name in state.imported_g729,
             )
         )
     return result
@@ -168,6 +216,7 @@ def update_message(name: str, body: MessageUpdate):
         text=msg.text,
         has_music=info.get("has_music", False),
         has_audio=os.path.exists(state._wav_path(name)),
+        imported_g729=name in state.imported_g729,
     )
 
 
@@ -175,7 +224,7 @@ def update_message(name: str, body: MessageUpdate):
 def generate_messages():
     """Lance la generation TTS pour tous les messages."""
     try:
-        tts_provider = create_tts_provider()
+        tts_provider = create_tts_provider(voice=state.voice_id)
         generator = SVIGenerator(
             tts=tts_provider,
             music_path=state.music_path,
@@ -195,6 +244,9 @@ def generate_messages():
             status_code=500,
             detail={"status": "error", "message": f"Erreur interne : {exc}"},
         ) from exc
+
+    state.imported_g729.clear()
+    state.save_messages()
 
     return GenerateResponse(
         results=[GenerateResult(name=r["name"], wav=r["wav"]) for r in results],
@@ -226,6 +278,114 @@ def get_audio(name: str):
         filename=f"{name}.wav",
         headers={"Cache-Control": "no-store"},
     )
+
+
+_ALLOWED_AUDIO_EXT = {
+    ".mp3",
+    ".wav",
+    ".ogg",
+    ".flac",
+    ".m4a",
+    ".aac",
+    ".wma",
+    ".g729",
+}
+
+
+@router.post("/audio/{name}/upload")
+async def upload_audio(name: str, file: UploadFile):
+    """Importe un fichier audio existant et le convertit en WAV telephonie."""
+    if not _VALID_NAME_RE.match(name):
+        raise HTTPException(status_code=400, detail="Nom de message invalide")
+
+    if state.get_message(name) is None:
+        raise HTTPException(status_code=404, detail=f"Message '{name}' introuvable")
+
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in _ALLOWED_AUDIO_EXT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Format non supporte. Extensions acceptees : "
+            f"{', '.join(sorted(_ALLOWED_AUDIO_EXT))}",
+        )
+
+    content = await file.read()
+    if len(content) > _MAX_MUSIC_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Fichier trop volumineux (max {_MAX_MUSIC_SIZE // (1024 * 1024)} Mo)",
+        )
+
+    os.makedirs(state.output_dir, exist_ok=True)
+    wav_path = state._wav_path(name)
+
+    if ext == ".g729":
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".g729", delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+        try:
+            convert_g729_to_wav(tmp_path, wav_path)
+        except (RuntimeError, FileNotFoundError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Impossible de convertir le fichier G.729 : {exc}",
+            ) from exc
+        finally:
+            os.unlink(tmp_path)
+        state.imported_g729.add(name)
+        state.save_messages()
+    else:
+        state.imported_g729.discard(name)
+        state.save_messages()
+        # Verifier si le message a une musique de fond configuree
+        msg_info = state.get_message_info(name) or {}
+        has_music = msg_info.get("has_music", False) and state.music_path
+
+        if has_music:
+            voice_format = ext.lstrip(".")  # ".mp3" → "mp3"
+            try:
+                mixed = mix_voice_with_music(content, state.music_path, voice_format=voice_format)
+            except (FileNotFoundError, Exception) as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Impossible de mixer l'audio : {exc}",
+                ) from exc
+            export_telephony(mixed, wav_path)
+        else:
+            import io
+
+            from pydub import AudioSegment
+
+            try:
+                audio = AudioSegment.from_file(io.BytesIO(content))
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Impossible de lire le fichier audio : {exc}",
+                ) from exc
+            export_telephony(audio, wav_path)
+
+    logger.info("Audio importe pour '%s' (%d octets)", name, len(content))
+    return {"status": "ok", "name": name}
+
+
+@router.delete("/audio/{name}")
+def delete_audio(name: str):
+    """Supprime le fichier WAV d'un message."""
+    if not _VALID_NAME_RE.match(name):
+        raise HTTPException(status_code=400, detail="Nom de message invalide")
+
+    wav_path = state._wav_path(name)
+    if not os.path.exists(wav_path):
+        raise HTTPException(status_code=404, detail=f"Audio '{name}' non trouve")
+
+    os.remove(wav_path)
+    state.imported_g729.discard(name)
+    state.save_messages()
+    logger.info("Audio supprime pour '%s'", name)
+    return {"status": "ok", "name": name}
 
 
 # --- Routes musique de fond ---

@@ -3,6 +3,7 @@ import GenerateButton from "./components/GenerateButton";
 import Header from "./components/Header";
 import MessageCard from "./components/MessageCard";
 import MusicUpload from "./components/MusicUpload";
+import VoiceSelector from "./components/VoiceSelector";
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -58,6 +59,15 @@ function App() {
     );
   };
 
+  const handleAudioImport = () => {
+    setAudioVersion((v) => v + 1);
+    fetchMessages();
+  };
+
+  const handleAudioDelete = () => {
+    fetchMessages();
+  };
+
   const handleGenerate = async () => {
     const res = await fetch("/api/generate", { method: "POST" });
     if (!res.ok) {
@@ -92,9 +102,12 @@ function App() {
           message={msg}
           audioVersion={audioVersion}
           onSave={handleSave}
+          onAudioImport={handleAudioImport}
+          onAudioDelete={handleAudioDelete}
         />
       ))}
       <MusicUpload />
+      <VoiceSelector />
       {messages.length > 0 && (
         <GenerateButton onGenerate={handleGenerate} />
       )}

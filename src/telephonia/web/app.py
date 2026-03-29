@@ -70,7 +70,7 @@ def main():
     webbrowser.open(local_url)
 
     app = create_app()
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 
 if __name__ == "__main__":
