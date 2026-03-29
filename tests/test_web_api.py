@@ -290,3 +290,71 @@ class TestGenerateMessages:
         assert response.status_code == 500
         data = response.json()
         assert "detail" in data
+
+
+class TestMusicUpload:
+    """Tests pour GET/POST/DELETE /api/music."""
+
+    def test_get_music_status(self, client):
+        """GET /api/music retourne le statut."""
+        response = client.get("/api/music")
+        assert response.status_code == 200
+        data = response.json()
+        assert "has_music" in data
+
+    def test_upload_mp3(self, client, tmp_path):
+        """POST /api/music avec un fichier MP3 valide."""
+        original_music = state.music_path
+        with patch("telephonia.web.api.get_music_upload_dir", return_value=str(tmp_path)):
+            mp3_content = b"\xff\xfb\x90\x00" + b"\x00" * 1000
+            response = client.post(
+                "/api/music",
+                files={"file": ("test.mp3", mp3_content, "audio/mpeg")},
+            )
+            assert response.status_code == 200
+            assert response.json()["status"] == "ok"
+            assert os.path.exists(os.path.join(str(tmp_path), "musique_fond.mp3"))
+        state.music_path = original_music
+
+    def test_upload_rejects_non_mp3(self, client):
+        """POST /api/music avec un fichier non-MP3 → 400."""
+        response = client.post(
+            "/api/music",
+            files={"file": ("test.wav", b"\x00" * 100, "audio/wav")},
+        )
+        assert response.status_code == 400
+        assert "MP3" in response.json()["detail"]
+
+    def test_upload_rejects_too_large(self, client):
+        """POST /api/music avec un fichier trop gros → 400."""
+        big_content = b"\xff\xfb\x90\x00" + b"\x00" * (21 * 1024 * 1024)
+        response = client.post(
+            "/api/music",
+            files={"file": ("big.mp3", big_content, "audio/mpeg")},
+        )
+        assert response.status_code == 400
+        assert "volumineux" in response.json()["detail"]
+
+    def test_delete_music(self, client, tmp_path):
+        """DELETE /api/music supprime le fichier."""
+        music_file = os.path.join(str(tmp_path), "musique_fond.mp3")
+        with open(music_file, "wb") as f:
+            f.write(b"\xff\xfb\x90\x00")
+
+        original_music = state.music_path
+        with patch("telephonia.web.api.get_music_upload_dir", return_value=str(tmp_path)):
+            with patch("telephonia.web.api.get_music_path", return_value=None):
+                response = client.delete("/api/music")
+                assert response.status_code == 200
+                assert not os.path.exists(music_file)
+                assert response.json()["has_music"] is False
+        state.music_path = original_music
+
+    def test_delete_music_no_file(self, client, tmp_path):
+        """DELETE /api/music sans fichier → OK quand meme."""
+        original_music = state.music_path
+        with patch("telephonia.web.api.get_music_upload_dir", return_value=str(tmp_path)):
+            with patch("telephonia.web.api.get_music_path", return_value=None):
+                response = client.delete("/api/music")
+                assert response.status_code == 200
+        state.music_path = original_music

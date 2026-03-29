@@ -7,6 +7,7 @@ from telephonia.paths import (
     get_assets_dir,
     get_ffmpeg_path,
     get_music_path,
+    get_music_upload_dir,
     get_output_dir,
     get_project_root,
     get_static_dir,
@@ -106,6 +107,27 @@ class TestGetMusicPathFrozen:
         assert result is not None
         assert "AppData" in result
         assert result.endswith("musique_fond.mp3")
+
+
+class TestGetMusicUploadDir:
+    """Tests pour get_music_upload_dir."""
+
+    def test_dev_context(self):
+        """En dev, le dossier upload est sous assets/."""
+        result = get_music_upload_dir()
+        assert result.endswith("assets")
+
+    @patch("telephonia.paths.platform.system", return_value="Windows")
+    @patch("telephonia.paths.sys")
+    @patch.dict(os.environ, {"LOCALAPPDATA": "C:\\Users\\test\\AppData\\Local"})
+    def test_frozen_windows(self, mock_sys, _mock_platform):
+        """En bundle Windows, upload dans LOCALAPPDATA."""
+        mock_sys.frozen = True
+        mock_sys._MEIPASS = "C:\\tmp\\meipass"
+        mock_sys.executable = "C:\\Program Files\\telephonIA\\telephonIA.exe"
+        result = get_music_upload_dir()
+        assert "AppData" in result
+        assert result.endswith(os.path.join("telephonIA", "assets"))
 
 
 class TestGetStaticDir:
