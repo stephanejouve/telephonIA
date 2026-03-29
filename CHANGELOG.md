@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.10 (2026-03-29)
+
+### Bug Fixes
+
+- **web**: Ajouter .g729 au file picker et retirer les print() debug
+  ([#29](https://github.com/stephanejouve/telephonIA/pull/29),
+  [`6c1ee91`](https://github.com/stephanejouve/telephonIA/commit/6c1ee916e4590426f57669546fea6cc5467f6a63))
+
+
 ## v1.4.9 (2026-03-29)
 
 ### Bug Fixes

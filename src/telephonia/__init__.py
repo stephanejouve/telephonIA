@@ -1,3 +1,3 @@
 """telephonIA — Generateur de bandes sonores SVI par IA."""
 
-__version__ = "1.4.9"
+__version__ = "1.4.10"
