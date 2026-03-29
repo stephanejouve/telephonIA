@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-03-29)
+
+### Bug Fixes
+
+- **ci**: Utiliser GH_TOKEN pour bypasser la protection de branche
+  ([`285304e`](https://github.com/stephanejouve/telephonIA/commit/285304efbf092242ebcaca2a9ed7f0c311ae6ea6))
+
+### Features
+
+- **web**: Import audio existant, selecteur de voix et suppression audio
+  ([#17](https://github.com/stephanejouve/telephonIA/pull/17),
+  [`3b64116`](https://github.com/stephanejouve/telephonIA/commit/3b64116457cd37c060a7bfc5421af19411a884a6))
+
+
 ## v1.2.1 (2026-03-29)
 
 ### Bug Fixes
