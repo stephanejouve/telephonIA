@@ -6,13 +6,13 @@ import os
 import re
 import signal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from telephonia.config import SVIMessage, get_default_messages
 from telephonia.generator import MESSAGES_INFO, GenerationError, SVIGenerator
-from telephonia.paths import get_music_path, get_output_dir
+from telephonia.paths import get_music_path, get_music_upload_dir, get_output_dir
 from telephonia.tts_provider import create_tts_provider
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 _VALID_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+_MAX_MUSIC_SIZE = 20 * 1024 * 1024  # 20 Mo
 
 
 # --- Modeles Pydantic ---
@@ -220,3 +221,54 @@ def get_audio(name: str):
         raise HTTPException(status_code=404, detail=f"Audio '{name}' non trouve")
 
     return FileResponse(wav_path, media_type="audio/wav", filename=f"{name}.wav")
+
+
+# --- Routes musique de fond ---
+
+
+@router.get("/music")
+def get_music_status():
+    """Retourne le statut de la musique de fond."""
+    music_path = get_music_path()
+    return {
+        "has_music": music_path is not None,
+        "filename": os.path.basename(music_path) if music_path else None,
+    }
+
+
+@router.post("/music")
+async def upload_music(file: UploadFile):
+    """Upload un fichier MP3 comme musique de fond."""
+    if not file.filename or not file.filename.lower().endswith(".mp3"):
+        raise HTTPException(status_code=400, detail="Seuls les fichiers MP3 sont acceptes")
+
+    content = await file.read()
+    if len(content) > _MAX_MUSIC_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Fichier trop volumineux (max {_MAX_MUSIC_SIZE // (1024 * 1024)} Mo)",
+        )
+
+    upload_dir = get_music_upload_dir()
+    os.makedirs(upload_dir, exist_ok=True)
+    dest = os.path.join(upload_dir, "musique_fond.mp3")
+
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    state.music_path = dest
+    logger.info("Musique de fond uploadee : %s (%d octets)", file.filename, len(content))
+    return {"status": "ok", "message": "Musique uploadee"}
+
+
+@router.delete("/music")
+def delete_music():
+    """Supprime la musique de fond uploadee."""
+    upload_dir = get_music_upload_dir()
+    dest = os.path.join(upload_dir, "musique_fond.mp3")
+    if os.path.exists(dest):
+        os.remove(dest)
+        logger.info("Musique de fond supprimee")
+
+    state.music_path = get_music_path()
+    return {"status": "ok", "has_music": state.music_path is not None}

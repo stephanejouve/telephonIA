@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import GenerateButton from "./components/GenerateButton";
 import Header from "./components/Header";
 import MessageCard from "./components/MessageCard";
+import MusicUpload from "./components/MusicUpload";
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -61,6 +62,7 @@ function App() {
           onSave={handleSave}
         />
       ))}
+      <MusicUpload />
       {messages.length > 0 && (
         <GenerateButton onGenerate={handleGenerate} />
       )}

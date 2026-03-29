@@ -42,22 +42,33 @@ def get_assets_dir() -> str:
     return os.path.join(get_project_root(), "assets")
 
 
+def get_music_upload_dir() -> str:
+    """Retourne le dossier pour les uploads musique (toujours writable).
+
+    En bundle Windows : %LOCALAPPDATA%/telephonIA/assets.
+    En dev : {racine}/assets.
+    """
+    if getattr(sys, "frozen", False) and platform.system() == "Windows":
+        return os.path.join(_get_user_data_dir(), "assets")
+    return os.path.join(get_project_root(), "assets")
+
+
 def get_music_path() -> str | None:
     """Retourne le chemin vers la musique de fond, ou None si absente.
 
-    En bundle Windows, cherche d'abord a cote de l'exe, puis dans
-    le dossier utilisateur (LOCALAPPDATA).
+    Cherche dans l'ordre :
+    1. Dossier upload (writable, LOCALAPPDATA sur Windows bundle)
+    2. A cote de l'exe (lecture seule OK dans Program Files)
     """
-    # Chemin principal (a cote de l'exe ou dans le projet)
-    path = os.path.join(get_assets_dir(), "musique_fond.mp3")
-    if os.path.exists(path):
-        return path
+    # 1. Dossier upload (prioritaire — fichier depose par l'utilisateur)
+    upload_path = os.path.join(get_music_upload_dir(), "musique_fond.mp3")
+    if os.path.exists(upload_path):
+        return upload_path
 
-    # Fallback : dossier utilisateur (bundle Windows)
-    if getattr(sys, "frozen", False) and platform.system() == "Windows":
-        alt = os.path.join(_get_user_data_dir(), "assets", "musique_fond.mp3")
-        if os.path.exists(alt):
-            return alt
+    # 2. A cote de l'exe ou dans le projet (livraison initiale)
+    assets_path = os.path.join(get_assets_dir(), "musique_fond.mp3")
+    if os.path.exists(assets_path):
+        return assets_path
 
     return None
 

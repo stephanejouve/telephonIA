@@ -228,6 +228,87 @@ body {
   color: #c62828;
 }
 
+/* Music Upload */
+.music-upload {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #7b1fa2;
+}
+
+.music-upload h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  color: #4a148c;
+}
+
+.music-status {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.music-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.music-file-input {
+  font-size: 0.85rem;
+}
+
+.btn-upload {
+  padding: 6px 16px;
+  background: #7b1fa2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-upload:hover {
+  background: #4a148c;
+}
+
+.btn-upload:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+}
+
+.btn-delete-music {
+  padding: 6px 16px;
+  background: transparent;
+  color: #c62828;
+  border: 1px solid #c62828;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-delete-music:hover {
+  background: #ffebee;
+}
+
+.music-feedback {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.music-feedback.success {
+  color: #2e7d32;
+}
+
+.music-feedback.error {
+  color: #c62828;
+}
+
 /* Error banner */
 .error-banner {
   background: #ffebee;
