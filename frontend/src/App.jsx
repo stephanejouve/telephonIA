@@ -8,6 +8,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
   const [audioVersion, setAudioVersion] = useState(0);
+  const [serverDown, setServerDown] = useState(false);
 
   const fetchMessages = async () => {
     try {
@@ -23,6 +24,25 @@ function App() {
 
   useEffect(() => {
     fetchMessages();
+  }, []);
+
+  // Health check : detecter l'arret du serveur
+  useEffect(() => {
+    let failures = 0;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/health");
+        if (res.ok) failures = 0;
+        else failures++;
+      } catch {
+        failures++;
+      }
+      if (failures >= 2) {
+        setServerDown(true);
+        clearInterval(interval);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleSave = async (name, text) => {
@@ -49,6 +69,18 @@ function App() {
     await fetchMessages();
     return data;
   };
+
+  if (serverDown) {
+    return (
+      <div className="shutdown-screen">
+        <div className="shutdown-card">
+          <h1>telephonIA</h1>
+          <p>L'application a ete fermee.</p>
+          <p className="shutdown-hint">Vous pouvez fermer cet onglet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
