@@ -152,13 +152,22 @@ function MessageCard({ message, audioVersion, onSave, onAudioImport, onAudioDele
           {importing ? "Import en cours..." : "Importer audio"}
         </button>
         {message.has_audio && (
-          <button
-            className="btn-delete-audio"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            {deleting ? "Suppression..." : "Supprimer"}
-          </button>
+          <>
+            <a
+              className="link-download"
+              href={`/api/audio/${message.name}?v=${audioVersion}`}
+              download={`${message.name}.wav`}
+            >
+              Telecharger
+            </a>
+            <button
+              className="btn-delete-audio"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Suppression..." : "Supprimer"}
+            </button>
+          </>
         )}
         {importStatus === "ok" && (
           <span className="save-ok">Audio importe !</span>

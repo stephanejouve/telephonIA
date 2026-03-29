@@ -69,6 +69,15 @@ function App() {
   };
 
   const handleGenerate = async () => {
+    const imported = messages.filter((m) => m.imported_g729);
+    if (imported.length > 0) {
+      const names = imported.map((m) => m.label).join(", ");
+      const ok = window.confirm(
+        `${names} : audio importe (G.729) qui sera ecrase par la generation TTS.\n\nContinuer ?`
+      );
+      if (!ok) return null;
+    }
+
     const res = await fetch("/api/generate", { method: "POST" });
     if (!res.ok) {
       const detail = await res.text();

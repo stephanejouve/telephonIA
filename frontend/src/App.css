@@ -201,6 +201,16 @@ body {
   margin-top: 12px;
 }
 
+.link-download {
+  font-size: 0.8rem;
+  color: #3949ab;
+  text-decoration: none;
+}
+
+.link-download:hover {
+  text-decoration: underline;
+}
+
 .btn-import {
   padding: 6px 16px;
   background: transparent;
