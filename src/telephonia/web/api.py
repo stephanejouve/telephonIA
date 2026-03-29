@@ -257,7 +257,9 @@ async def upload_music(file: UploadFile):
         f.write(content)
 
     state.music_path = dest
-    logger.info("Musique de fond uploadee : %s (%d octets)", file.filename, len(content))
+    logger.info("Musique uploadee : %s -> %s (%d octets)", file.filename, dest, len(content))
+    logger.info("Verification: fichier existe = %s", os.path.exists(dest))
+    logger.info("get_music_path() apres upload = %s", get_music_path())
     return {"status": "ok", "message": "Musique uploadee"}
 
 

@@ -48,20 +48,30 @@ Sur GitHub → onglet **Actions** → workflow **Build Windows** → bouton
 
 2. Copier `telephonIA.exe` dans ce dossier
 
-3. Creer un sous-dossier `assets\` et y copier `musique_fond.mp3` :
-   ```
-   C:\telephonIA\
-       telephonIA.exe
-       assets\
-           musique_fond.mp3
-   ```
+3. (Optionnel) Pour la musique de fond, deux options :
+   - **Via l'interface web** : utiliser le bouton "Uploader" dans la section
+     "Musique de fond" apres le lancement
+   - **Manuellement** : creer un sous-dossier `assets\` et y copier
+     `musique_fond.mp3` :
+     ```
+     C:\telephonIA\
+         telephonIA.exe
+         assets\
+             musique_fond.mp3
+     ```
 
 4. Double-cliquer sur `telephonIA.exe`
 
-5. Windows Defender va probablement afficher un avertissement
-   ("Application non reconnue") :
+5. **Windows SmartScreen** va probablement bloquer le lancement
+   ("Windows a protege votre ordinateur") :
    - Cliquer **Informations complementaires**
    - Cliquer **Executer quand meme**
+
+   Pour eviter cet avertissement a chaque lancement, ajouter une exclusion
+   Windows Defender (**PowerShell en administrateur**) :
+   ```powershell
+   Add-MpPreference -ExclusionPath "C:\telephonIA"
+   ```
 
 6. Le navigateur s'ouvre automatiquement sur l'interface web
 
@@ -150,10 +160,10 @@ Options par ordre de preference :
 
 | Symptome | Cause probable | Solution |
 |----------|---------------|----------|
-| .exe ne se lance pas | Windows Defender / SmartScreen | "Informations complementaires" → "Executer quand meme" |
+| .exe ne se lance pas | Windows Defender / SmartScreen | "Informations complementaires" → "Executer quand meme", puis `Add-MpPreference -ExclusionPath "C:\telephonIA"` |
 | .exe bloque par antivirus | Antivirus entreprise (Symantec, etc.) | Ajouter une exception pour le dossier `C:\telephonIA\` |
 | "Connexion impossible" a la generation | Pare-feu bloque Edge TTS | Voir section 3 |
 | Interface web ne s'ouvre pas | Pas de navigateur par defaut | Ouvrir manuellement l'URL affichee dans la console |
-| Pas de musique de fond | `musique_fond.mp3` absent | Placer le fichier dans `assets\` a cote du .exe |
+| Pas de musique de fond | `musique_fond.mp3` absent | Uploader via l'interface web ou placer dans `assets\` a cote du .exe |
 | Son metallique / coupe | Fichier source MP3 de mauvaise qualite | Utiliser un MP3 >= 128 kbps |
 | "Rate limit" ElevenLabs | Quota mensuel atteint | Ne pas configurer de cle → bascule auto sur Edge TTS |
