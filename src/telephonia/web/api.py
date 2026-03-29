@@ -346,16 +346,6 @@ async def upload_audio(name: str, file: UploadFile):
         finally:
             os.unlink(tmp_path)
         state.imported_g729.add(name)
-        state.music_path = None
-        # Supprimer physiquement la musique (best-effort, ne bloque pas l'import)
-        for music_dir in (get_music_upload_dir(), get_assets_dir()):
-            music_file = os.path.join(music_dir, "musique_fond.mp3")
-            try:
-                if os.path.exists(music_file):
-                    os.remove(music_file)
-                    logger.info("Musique supprimee : %s", music_file)
-            except OSError as exc:
-                logger.warning("Impossible de supprimer %s : %s", music_file, exc)
         state.save_messages()
     else:
         state.imported_g729.discard(name)
