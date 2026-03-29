@@ -43,12 +43,11 @@ class SVIGenerator:
         self.voice_format = voice_format
 
     def _refresh_music(self, messages: list[SVIMessage]) -> None:
-        """Met a jour background_music selon la presence du fichier sur disque."""
-        music_path = get_music_path()
+        """Met a jour background_music selon self.music_path (fourni par le state)."""
         music_names = {i["name"] for i in MESSAGES_INFO if i.get("has_music")}
         for msg in messages:
             if msg.name in music_names:
-                msg.background_music = music_path
+                msg.background_music = self.music_path
 
     def _process_audio(self, message: SVIMessage, voice_audio: bytes) -> dict:
         """Mixe et exporte un audio voix en WAV telephonie.
