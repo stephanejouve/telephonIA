@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -41,8 +44,8 @@ jobs:
 
       - name: Copy static files
         run: |
-          if (!(Test-Path "src\telephonia\web\static")) { mkdir "src\telephonia\web\static" }
-          Copy-Item -Recurse -Force "frontend\dist\*" "src\telephonia\web\static\"
+          mkdir -p src/telephonia/web/static
+          cp -r frontend/dist/* src/telephonia/web/static/
 
       - name: Build exe with PyInstaller
         run: poetry run python scripts/build_bundle.py
