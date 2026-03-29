@@ -73,9 +73,9 @@ def mix_voice_with_music(
 ) -> AudioSegment:
     """Mixe un audio voix avec une musique de fond.
 
-    La musique demarre seule pendant 1 mesure (4 temps, detectes
-    automatiquement), puis la voix entre sur le premier temps
-    de la 2e mesure.
+    La musique demarre seule pendant 1 mesure (intro), puis la voix
+    entre sur le premier temps de la 2e mesure. Apres la voix,
+    1 mesure de musique seule conclut le message (outro).
 
     Args:
         voice_audio: Audio de la voix en bytes.
@@ -102,13 +102,13 @@ def mix_voice_with_music(
             f"Impossible de lire le fichier musique '{music_path}' : {exc}"
         ) from exc
 
-    # Detecter le BPM et calculer l'intro (1 mesure = 4 temps)
+    # Detecter le BPM et calculer intro/outro (1 mesure = 4 temps)
     bpm = _estimate_bpm(music)
-    intro_ms = int(4 * 60 / bpm * 1000)
-    logger.info("Intro musique : %dms (1 mesure a %.0f BPM)", intro_ms, bpm)
+    measure_ms = int(4 * 60 / bpm * 1000)
+    logger.info("Intro/outro : %dms chacun (1 mesure a %.0f BPM)", measure_ms, bpm)
 
-    # Duree totale = intro + voix
-    total_duration = intro_ms + len(voice)
+    # Duree totale = intro + voix + outro
+    total_duration = measure_ms + len(voice) + measure_ms
 
     # Boucler la musique pour couvrir la duree totale
     while len(music) < total_duration:
@@ -119,11 +119,13 @@ def mix_voice_with_music(
     music = music + music_volume_db
     music = music.fade_in(fade_in_ms).fade_out(fade_out_ms)
 
-    # Voix precedee de silence (intro)
-    voice_with_intro = AudioSegment.silent(duration=intro_ms) + voice
+    # Voix encadree de silence (intro + outro)
+    voice_padded = (
+        AudioSegment.silent(duration=measure_ms) + voice + AudioSegment.silent(duration=measure_ms)
+    )
 
     # Superposer voix (decalee) et musique
-    return voice_with_intro.overlay(music)
+    return voice_padded.overlay(music)
 
 
 def export_audio(

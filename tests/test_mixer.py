@@ -54,14 +54,14 @@ class TestMixVoiceWithMusic:
         result = mix_voice_with_music(voice_audio_bytes, music_file, voice_format="wav")
         assert isinstance(result, AudioSegment)
 
-    def test_mix_duration_includes_intro(self, voice_audio_bytes, music_file):
+    def test_mix_duration_includes_intro_outro(self, voice_audio_bytes, music_file):
         result = mix_voice_with_music(voice_audio_bytes, music_file, voice_format="wav")
         voice = AudioSegment.from_file(io.BytesIO(voice_audio_bytes), format="wav")
-        # Le mix doit etre plus long que la voix (intro d'1 mesure)
+        # Le mix doit etre plus long que la voix (intro + outro d'1 mesure chacun)
         assert len(result) > len(voice)
-        # L'intro ne devrait pas depasser 4s (40 BPM minimum)
-        intro = len(result) - len(voice)
-        assert 500 < intro < 4000
+        padding = len(result) - len(voice)
+        # 2 mesures (intro + outro) entre 1s et 8s au total
+        assert 1000 < padding < 8000
 
     def test_mix_with_short_music_loops(self, voice_audio_bytes, short_music_file):
         result = mix_voice_with_music(voice_audio_bytes, short_music_file, voice_format="wav")
