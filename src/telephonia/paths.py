@@ -1,6 +1,7 @@
 """Source de verite pour tous les chemins du projet."""
 
 import os
+import platform
 import sys
 
 
@@ -15,19 +16,61 @@ def get_project_root() -> str:
     return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
+def _get_exe_dir() -> str:
+    """Retourne le dossier contenant l'executable (bundle uniquement)."""
+    return os.path.dirname(os.path.abspath(sys.executable))
+
+
+def _get_user_data_dir() -> str:
+    """Retourne le repertoire de donnees utilisateur pour le bundle Windows.
+
+    Utilise %LOCALAPPDATA%/telephonIA (toujours accessible en ecriture,
+    meme si le .exe est dans C:\\Program Files).
+    """
+    base = os.environ.get("LOCALAPPDATA", os.path.expanduser("~"))
+    return os.path.join(base, "telephonIA")
+
+
 def get_assets_dir() -> str:
-    """Retourne le chemin du dossier assets."""
+    """Retourne le chemin du dossier assets.
+
+    En bundle, cherche a cote de l'executable (lecture seule OK).
+    En dev, sous la racine du projet.
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.join(_get_exe_dir(), "assets")
     return os.path.join(get_project_root(), "assets")
 
 
 def get_music_path() -> str | None:
-    """Retourne le chemin vers la musique de fond, ou None si absente."""
+    """Retourne le chemin vers la musique de fond, ou None si absente.
+
+    En bundle Windows, cherche d'abord a cote de l'exe, puis dans
+    le dossier utilisateur (LOCALAPPDATA).
+    """
+    # Chemin principal (a cote de l'exe ou dans le projet)
     path = os.path.join(get_assets_dir(), "musique_fond.mp3")
-    return path if os.path.exists(path) else None
+    if os.path.exists(path):
+        return path
+
+    # Fallback : dossier utilisateur (bundle Windows)
+    if getattr(sys, "frozen", False) and platform.system() == "Windows":
+        alt = os.path.join(_get_user_data_dir(), "assets", "musique_fond.mp3")
+        if os.path.exists(alt):
+            return alt
+
+    return None
 
 
 def get_output_dir() -> str:
-    """Retourne le chemin du dossier de sortie."""
+    """Retourne le chemin du dossier de sortie.
+
+    En bundle Windows, utilise %LOCALAPPDATA%/telephonIA/output pour eviter
+    les problemes de permissions dans C:\\Program Files.
+    En dev, sous la racine du projet.
+    """
+    if getattr(sys, "frozen", False) and platform.system() == "Windows":
+        return os.path.join(_get_user_data_dir(), "output")
     return os.path.join(get_project_root(), "output")
 
 
