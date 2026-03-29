@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.6 (2026-03-29)
+
+### Bug Fixes
+
+- **api**: Rendre la suppression musique non-bloquante a l'import G.729
+  ([#25](https://github.com/stephanejouve/telephonIA/pull/25),
+  [`af32d1f`](https://github.com/stephanejouve/telephonIA/commit/af32d1fe1ca2dcd80da086fed7972d37fcb78bad))
+
+
 ## v1.4.5 (2026-03-29)
 
 ### Bug Fixes
