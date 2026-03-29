@@ -220,7 +220,12 @@ def get_audio(name: str):
     if not os.path.exists(wav_path):
         raise HTTPException(status_code=404, detail=f"Audio '{name}' non trouve")
 
-    return FileResponse(wav_path, media_type="audio/wav", filename=f"{name}.wav")
+    return FileResponse(
+        wav_path,
+        media_type="audio/wav",
+        filename=f"{name}.wav",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 # --- Routes musique de fond ---
