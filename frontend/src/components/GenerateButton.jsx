@@ -9,6 +9,7 @@ function GenerateButton({ onGenerate }) {
     setResult(null);
     try {
       const data = await onGenerate();
+      if (!data) return;
       setResult({
         type: "success",
         text: `${data.results.length} messages generes avec succes`,
