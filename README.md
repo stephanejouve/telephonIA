@@ -4,25 +4,42 @@
 
 Generateur de bandes sonores SVI (Serveur Vocal Interactif) par IA.
 
-Automatise la creation de messages telephoniques professionnels via l'API
-ElevenLabs (text-to-speech), avec mixage musique de fond optionnel.
+Automatise la creation de messages telephoniques professionnels via
+text-to-speech (ElevenLabs ou Edge TTS), avec mixage musique de fond,
+import audio existant et conversion G.729.
 
-## Cas d'usage
+## Fonctionnalites
 
-Societe fictive **Les Saveurs du Terroir** (epicerie fine en ligne) avec 3 messages :
+- **Interface web** — editeur de textes, lecteur audio, selecteur de voix,
+  gestion de la musique de fond, import de fichiers audio existants
+- **Double moteur TTS** — ElevenLabs (premium) ou Microsoft Edge TTS (gratuit,
+  aucune cle requise)
+- **Mixage intelligent** — intro et outro musicales d'une mesure (BPM detecte
+  automatiquement), voix superposee a la musique de fond
+- **Import audio** — importer un enregistrement existant (MP3, WAV, OGG, FLAC,
+  M4A, AAC, WMA) avec mixage musique de fond automatique, ou un fichier G.729
+  (conversion directe sans mixage)
+- **Format telephonie** — sortie WAV LPCM 16 kHz, mono, 16 bits, compatible
+  avec tous les serveurs SVI
+- **Convertisseur G.729** — outil CLI dedie pour convertir des fichiers VoIP
+  G.729 en WAV telephonie (unitaire ou batch)
 
-| Message | Duree | Musique |
-|---------|-------|---------|
-| Pre-decroche | ~10s | Non |
-| Attente | ~50s | Oui (-15 dB) |
-| Repondeur | ~30s | Non |
+## Les 3 messages SVI
+
+| Message | Description | Musique |
+|---------|-------------|---------|
+| Pre-decroche | Court message d'accueil a la prise d'appel | Optionnelle |
+| Attente | Message diffuse pendant la mise en attente | Optionnelle |
+| Repondeur | Message du repondeur (hors horaires) | Optionnelle |
+
+Des textes par defaut sont fournis (societe fictive *Les Saveurs du Terroir*)
+et sont editables depuis l'interface web ou le CLI.
 
 ## Pre-requis
 
 - Python >= 3.11
 - [Poetry](https://python-poetry.org/)
 - [ffmpeg](https://ffmpeg.org/) (utilise par pydub)
-- Cle API [ElevenLabs](https://elevenlabs.io/) dans le trousseau systeme
 
 ### Installation de ffmpeg
 
@@ -38,12 +55,10 @@ winget install ffmpeg
 sudo apt-get install ffmpeg
 ```
 
-### Ajout de la cle API au trousseau
+### Cle API ElevenLabs (optionnel)
 
-La cle est stockee via [keyring](https://pypi.org/project/keyring/) (multiplateforme) :
-- **macOS** : Trousseau d'acces (Keychain)
-- **Windows** : Credential Manager
-- **Linux** : Secret Service (GNOME Keyring / KWallet)
+Sans cle, telephonIA utilise **Edge TTS** (gratuit, voix Microsoft).
+Pour utiliser ElevenLabs (voix premium), ajouter la cle au trousseau systeme :
 
 ```bash
 # Methode universelle (macOS / Windows / Linux)
@@ -53,6 +68,11 @@ keyring set elevenlabs_api_key telephonia
 python -c "import keyring; keyring.set_password('elevenlabs_api_key', 'telephonia', 'VOTRE_CLE')"
 ```
 
+Le trousseau utilise [keyring](https://pypi.org/project/keyring/) :
+- **macOS** : Trousseau d'acces (Keychain)
+- **Windows** : Credential Manager
+- **Linux** : Secret Service (GNOME Keyring / KWallet)
+
 ## Installation
 
 ```bash
@@ -61,26 +81,65 @@ cd telephonIA
 poetry install
 ```
 
+Un executable Windows (`.exe`) est disponible dans les
+[releases GitHub](https://github.com/stephanejouve/telephonIA/releases/latest).
+
 ## Utilisation
 
-```bash
-# Placer une musique de fond (optionnel)
-cp votre_musique.mp3 assets/musique_fond.mp3
+### Interface web (recommande)
 
+```bash
+poetry run telephonia-web
+```
+
+Le navigateur s'ouvre automatiquement. L'interface affiche :
+- les 3 messages avec editeur de texte
+- le selecteur de voix TTS
+- le lecteur audio pour chaque message genere
+- le bouton de generation TTS
+- l'upload/suppression de musique de fond
+- l'import de fichiers audio existants (avec mixage) ou G.729 (conversion directe)
+- le telechargement des fichiers WAV generes
+
+L'URL LAN est affichee dans la console pour un acces depuis un autre poste du
+reseau local.
+
+### CLI
+
+```bash
 # Generer les messages SVI
 poetry run telephonia
 ```
 
 Le CLI propose deux modes :
-1. **Textes par defaut** — messages pre-configures (Les Saveurs du Terroir)
+1. **Textes par defaut** — messages pre-configures
 2. **Saisie manuelle** — formulaire interactif pour saisir les 3 textes
+
+### Import audio existant
+
+Depuis l'interface web, le bouton **Importer audio** sur chaque carte de
+message permet d'importer un enregistrement existant :
+
+- **Formats audio** (MP3, WAV, OGG, FLAC, M4A, AAC, WMA) — le fichier est
+  converti au format telephonie et **mixe avec la musique de fond** si elle est
+  active. Utile quand on prefere une voix enregistree au TTS tout en conservant
+  le mixage musical.
+- **Fichiers G.729** (.g729) — conversion directe via ffmpeg, **sans mixage**.
+  Le fichier G.729 remplace integralement l'audio du message.
 
 ### Musique de fond
 
-Placer un fichier MP3 dans `assets/musique_fond.mp3`. Il sera mixe
-automatiquement avec le message d'attente a -15 dB.
+La musique peut etre geree depuis l'interface web (upload/suppression) ou
+placee manuellement dans `assets/musique_fond.mp3`.
 
-Sources de musiques libres de droits recommandees :
+Le mixage ajoute automatiquement :
+- **Intro** : 1 mesure de musique seule (duree calculee selon le BPM detecte)
+- **Corps** : voix superposee a la musique (volume musique : -15 dB)
+- **Outro** : 1 mesure de musique seule
+
+La musique est bouclée automatiquement si elle est plus courte que le message.
+
+Sources de musiques libres de droits :
 
 | Site | Recherche suggeree |
 |------|--------------------|
@@ -90,14 +149,26 @@ Sources de musiques libres de droits recommandees :
 | [freemusicarchive.org](https://freemusicarchive.org/) | Catalogue pro |
 
 Privilegier une musique **neutre, sans voix, sans rythme trop marque** (2-3 min
-minimum, le script la boucle automatiquement si elle est trop courte).
+minimum).
 
-Les fichiers sont generes dans `output/` au format standard telephonie :
-- **WAV** — LPCM16 @ 16 kHz, mono, 16 bit (< 8 Mo, < 2 min)
+## Convertisseur G.729
+
+Outil CLI dedie pour convertir des fichiers G.729 (VoIP) en WAV telephonie :
+
+```bash
+# Via Python (multiplateforme)
+poetry run g729towav
+
+# Via script shell (macOS / Linux)
+./scripts/g729towav.sh fichier.g729              # un fichier
+./scripts/g729towav.sh *.g729                    # batch
+```
+
+Le CLI propose la conversion unitaire ou batch (dossier entier).
 
 ## Format de sortie
 
-Le format WAV produit est directement compatible avec les serveurs SVI :
+Tous les fichiers generes sont au format standard telephonie :
 
 | Spec | Valeur |
 |------|--------|
@@ -105,8 +176,22 @@ Le format WAV produit est directement compatible avec les serveurs SVI :
 | Frequence | 16 000 Hz |
 | Canaux | Mono |
 | Resolution | 16 bits |
-| Poids max | < 8 Mo |
-| Duree max | < 2 min |
+
+Les fichiers sont generes dans `output/` (ou `%LOCALAPPDATA%/telephonIA/output`
+sous Windows avec l'executable).
+
+## Voix
+
+### Edge TTS (gratuit — par defaut)
+
+Voix par defaut : **Denise** (`fr-FR-DeniseNeural`).
+Le selecteur de voix dans l'interface web liste toutes les voix francaises
+disponibles.
+
+### ElevenLabs (premium)
+
+Voix par defaut : **Denise** (`XB0fDUnXU5powFXDhCwa`).
+Le selecteur de voix liste toutes les voix du compte ElevenLabs.
 
 ## Developpement
 
@@ -121,34 +206,6 @@ poetry run isort src/ tests/ --profile black --line-length=100
 # Lint
 poetry run ruff check src/
 ```
-
-## Convertisseur G.729 -> WAV
-
-Outil integre pour convertir des fichiers G.729 (VoIP) en WAV telephonie.
-
-```bash
-# Via Python (multiplateforme — macOS / Windows / Linux)
-poetry run g729towav
-
-# Via script shell (macOS / Linux uniquement)
-./scripts/g729towav.sh fichier.g729              # un fichier
-./scripts/g729towav.sh *.g729                    # batch
-```
-
-Le CLI Python propose la conversion unitaire ou batch (dossier entier).
-Sortie : WAV 16 kHz, mono, 16 bits.
-
-## Configuration des messages
-
-Les textes par defaut sont dans `src/telephonia/config.py`.
-Pour une saisie ponctuelle, utiliser le mode 2 (saisie manuelle) du CLI.
-
-## Voix
-
-Voix par defaut : **Charlotte** (ElevenLabs, francais).
-Pour changer de voix, modifier `voice_id` dans `generator.py`.
-
-Voix FR recommandees : Charlotte, Mathieu.
 
 ## Licence
 
