@@ -336,9 +336,14 @@ async def upload_audio(name: str, file: UploadFile):
         finally:
             os.unlink(tmp_path)
         state.imported_g729.add(name)
+        # Supprimer physiquement la musique uploadee (get_music_path() la retrouverait sinon)
+        upload_dir = get_music_upload_dir()
+        music_file = os.path.join(upload_dir, "musique_fond.mp3")
+        if os.path.exists(music_file):
+            os.remove(music_file)
+            logger.info("Musique de fond supprimee (import G.729)")
         state.music_path = None
         state.save_messages()
-        logger.info("Musique de fond desactivee (import G.729)")
     else:
         state.imported_g729.discard(name)
         state.save_messages()
