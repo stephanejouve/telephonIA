@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.9 (2026-03-29)
+
+### Bug Fixes
+
+- Ajout print() debug dans upload_audio (visible dans console exe)
+  ([#28](https://github.com/stephanejouve/telephonIA/pull/28),
+  [`e776b17`](https://github.com/stephanejouve/telephonIA/commit/e776b17f7c3a3d69a4e2c4c0502c44773db862ac))
+
+
 ## v1.4.8 (2026-03-29)
 
 ### Bug Fixes
