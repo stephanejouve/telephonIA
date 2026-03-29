@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-03-29)
+
+### Features
+
+- Outro musique d'une mesure apres la voix
+  ([#15](https://github.com/stephanejouve/telephonIA/pull/15),
+  [`bb7e5f3`](https://github.com/stephanejouve/telephonIA/commit/bb7e5f39c932f90d4c1c7eaf5f84b1b5e6549d39))
+
+
 ## v1.1.0 (2026-03-29)
 
 ### Features
