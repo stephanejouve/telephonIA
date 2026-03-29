@@ -230,16 +230,12 @@ class TestSVIGenerator:
 
 
 class TestMusicRefresh:
-    """Tests pour la detection dynamique de musique_fond.mp3."""
+    """Tests pour _refresh_music qui utilise self.music_path."""
 
-    @patch("telephonia.generator.get_music_path")
-    def test_generate_detects_music_added_after_init(
-        self, mock_get_music, mock_tts, tmp_path, music_file
-    ):
-        """music_path absent a l'init, present au moment de generate_all → mixage."""
-        # Init sans musique
+    def test_refresh_music_uses_constructor_path(self, mock_tts, tmp_path, music_file):
+        """_refresh_music utilise self.music_path, pas get_music_path()."""
         generator = SVIGenerator(
-            tts=mock_tts, music_path=None, output_dir=str(tmp_path), voice_format="wav"
+            tts=mock_tts, music_path=music_file, output_dir=str(tmp_path), voice_format="wav"
         )
         messages = [
             SVIMessage(
@@ -249,20 +245,16 @@ class TestMusicRefresh:
                 background_music=None,
             ),
         ]
-        # Musique apparait avant la generation
-        mock_get_music.return_value = music_file
 
         results = generator.generate_all(messages=messages)
 
         assert len(results) == 1
         assert "wav" in results[0]
         assert os.path.exists(results[0]["wav"])
-        # Le message a ete mis a jour avec le chemin musique
         assert messages[0].background_music == music_file
 
-    @patch("telephonia.generator.get_music_path")
-    def test_generate_without_music_fallback(self, mock_get_music, mock_tts, tmp_path):
-        """music_path absent au moment de generate_all → voix seule, pas d'exception."""
+    def test_refresh_music_none_no_mix(self, mock_tts, tmp_path):
+        """music_path=None → voix seule, pas de mixage."""
         generator = SVIGenerator(
             tts=mock_tts, music_path=None, output_dir=str(tmp_path), voice_format="wav"
         )
@@ -274,7 +266,6 @@ class TestMusicRefresh:
                 background_music=None,
             ),
         ]
-        mock_get_music.return_value = None
 
         results = generator.generate_all(messages=messages)
 
