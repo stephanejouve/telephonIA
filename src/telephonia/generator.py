@@ -174,7 +174,7 @@ MESSAGES_INFO = [
         "name": "pre_decroche",
         "label": "Pre-decroche",
         "description": "Court message d'accueil a la prise d'appel",
-        "has_music": False,
+        "has_music": True,
     },
     {
         "name": "attente",
@@ -186,7 +186,7 @@ MESSAGES_INFO = [
         "name": "repondeur",
         "label": "Repondeur",
         "description": "Message du repondeur (hors horaires)",
-        "has_music": False,
+        "has_music": True,
     },
 ]
 
