@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-03-29)
+
+### Features
+
+- **web**: Confirmation ecrasement G.729 et lien telecharger
+  ([#19](https://github.com/stephanejouve/telephonIA/pull/19),
+  [`21e57a3`](https://github.com/stephanejouve/telephonIA/commit/21e57a3b079f7ad333695ed3ace68a47ea6407c7))
+
+
 ## v1.3.0 (2026-03-29)
 
 ### Bug Fixes
