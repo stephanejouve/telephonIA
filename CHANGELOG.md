@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.3 (2026-03-29)
+
+### Bug Fixes
+
+- **api**: Supprimer physiquement la musique a l'import G.729
+  ([#22](https://github.com/stephanejouve/telephonIA/pull/22),
+  [`00f6214`](https://github.com/stephanejouve/telephonIA/commit/00f6214fe6740f0fc175f9fc9f3b2196faf67014))
+
+
 ## v1.4.2 (2026-03-29)
 
 ### Bug Fixes
