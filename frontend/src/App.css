@@ -309,6 +309,41 @@ body {
   color: #c62828;
 }
 
+/* Shutdown screen */
+.shutdown-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #e8eaf6;
+}
+
+.shutdown-card {
+  text-align: center;
+  padding: 40px 60px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shutdown-card h1 {
+  font-size: 1.8rem;
+  color: #3949ab;
+  margin-bottom: 12px;
+}
+
+.shutdown-card p {
+  color: #555;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.shutdown-hint {
+  color: #999 !important;
+  font-size: 0.85rem !important;
+  margin-top: 12px !important;
+}
+
 /* Error banner */
 .error-banner {
   background: #ffebee;
