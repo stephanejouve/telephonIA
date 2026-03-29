@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.4.5 (2026-03-29)
+
+### Bug Fixes
+
+- **generator**: Utiliser self.music_path au lieu de get_music_path()
+  ([#24](https://github.com/stephanejouve/telephonIA/pull/24),
+  [`d539472`](https://github.com/stephanejouve/telephonIA/commit/d53947248dfe92087cba49b9869c2ba68ff05cb9))
+
+
 ## v1.4.4 (2026-03-29)
 
 ### Bug Fixes
