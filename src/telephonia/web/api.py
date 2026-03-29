@@ -313,7 +313,6 @@ async def upload_audio(name: str, file: UploadFile):
         raise HTTPException(status_code=404, detail=f"Message '{name}' introuvable")
 
     ext = os.path.splitext(file.filename or "")[1].lower()
-    print(f"[UPLOAD] fichier='{file.filename}' ext='{ext}' message='{name}'")
     if ext not in _ALLOWED_AUDIO_EXT:
         raise HTTPException(
             status_code=400,
@@ -332,7 +331,6 @@ async def upload_audio(name: str, file: UploadFile):
     wav_path = state._wav_path(name)
 
     if ext == ".g729":
-        print("[UPLOAD] -> chemin G.729 (ffmpeg, pas de mix)")
         import tempfile
 
         with tempfile.NamedTemporaryFile(suffix=".g729", delete=False) as tmp:
@@ -354,9 +352,6 @@ async def upload_audio(name: str, file: UploadFile):
         state.save_messages()
         msg_info = state.get_message_info(name) or {}
         has_music = msg_info.get("has_music", False) and state.music_path
-        print(
-            f"[UPLOAD] -> chemin standard (has_music={bool(has_music)}, music={state.music_path})"
-        )
 
         if has_music:
             voice_format = ext.lstrip(".")  # ".mp3" → "mp3"

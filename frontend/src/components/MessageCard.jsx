@@ -139,7 +139,7 @@ function MessageCard({ message, audioVersion, onSave, onAudioImport, onAudioDele
       <div className="audio-import">
         <input
           type="file"
-          accept="audio/*"
+          accept="audio/*,.g729"
           ref={fileInputRef}
           onChange={handleImport}
           style={{ display: "none" }}
