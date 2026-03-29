@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import signal
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -198,6 +199,14 @@ def generate_messages():
         results=[GenerateResult(name=r["name"], wav=r["wav"]) for r in results],
         status="ok",
     )
+
+
+@router.post("/shutdown")
+def shutdown():
+    """Arrete proprement le serveur."""
+    logger.info("Arret du serveur demande via /api/shutdown")
+    os.kill(os.getpid(), signal.SIGINT)
+    return {"status": "ok", "message": "Arret en cours..."}
 
 
 @router.get("/audio/{name}")

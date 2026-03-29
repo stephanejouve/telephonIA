@@ -2,6 +2,7 @@
 
 import io
 import os
+import signal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -188,6 +189,20 @@ class TestJsonPersistence:
             assert state.get_message("cle_fantome") is None
         finally:
             state.output_dir = original_output
+
+
+class TestShutdown:
+    """Tests pour POST /api/shutdown."""
+
+    @patch("telephonia.web.api.os.kill")
+    def test_shutdown_sends_sigint(self, mock_kill, client):
+        """POST /api/shutdown → envoie SIGINT au process."""
+        response = client.post("/api/shutdown")
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        mock_kill.assert_called_once()
+        args = mock_kill.call_args[0]
+        assert args[1] == signal.SIGINT
 
 
 class TestGetAudio:
