@@ -7,6 +7,61 @@ from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_BPM = 120.0
+_CHUNK_MS = 50
+
+
+def _estimate_bpm(music: AudioSegment) -> float:
+    """Estime le BPM par autocorrelation de l'enveloppe d'energie.
+
+    Analyse les 30 premieres secondes en mono, decoupe en chunks de 50ms,
+    calcule la force des onsets, puis cherche la periodicite dominante.
+    Fallback a 120 BPM si la detection echoue.
+    """
+    clip = music[:30000].set_channels(1)
+
+    # Energie par chunk (dBFS, -inf pour silence → remplace par -100)
+    energies = []
+    for i in range(0, len(clip) - _CHUNK_MS, _CHUNK_MS):
+        chunk = clip[i : i + _CHUNK_MS]
+        try:
+            energies.append(chunk.dBFS)
+        except Exception:
+            energies.append(-100.0)
+
+    if len(energies) < 10:
+        return _DEFAULT_BPM
+
+    # Force des onsets (variations positives d'energie)
+    onsets = [max(0.0, energies[i] - energies[i - 1]) for i in range(1, len(energies))]
+
+    # Autocorrelation : chercher le lag dominant entre 250ms (240 BPM) et 1500ms (40 BPM)
+    min_lag = max(1, int(250 / _CHUNK_MS))
+    max_lag = min(int(1500 / _CHUNK_MS), len(onsets) // 2)
+
+    if max_lag <= min_lag:
+        return _DEFAULT_BPM
+
+    best_lag = min_lag
+    best_corr = 0.0
+    for lag in range(min_lag, max_lag):
+        corr = sum(onsets[i] * onsets[i + lag] for i in range(len(onsets) - lag))
+        if corr > best_corr:
+            best_corr = corr
+            best_lag = lag
+
+    beat_interval_ms = best_lag * _CHUNK_MS
+    bpm = 60000.0 / beat_interval_ms
+
+    # Normaliser dans une plage raisonnable (60-180 BPM)
+    while bpm < 60:
+        bpm *= 2
+    while bpm > 180:
+        bpm /= 2
+
+    logger.info("BPM detecte : %.0f (intervalle %.0fms)", bpm, beat_interval_ms)
+    return bpm
+
 
 def mix_voice_with_music(
     voice_audio: bytes,
@@ -18,15 +73,16 @@ def mix_voice_with_music(
 ) -> AudioSegment:
     """Mixe un audio voix avec une musique de fond.
 
-    La musique est bouclée si nécessaire pour couvrir la durée de la voix,
-    puis superposée avec le volume spécifié.
+    La musique demarre seule pendant 1 mesure (4 temps, detectes
+    automatiquement), puis la voix entre sur le premier temps
+    de la 2e mesure.
 
     Args:
         voice_audio: Audio de la voix en bytes.
         music_path: Chemin vers le fichier musique de fond.
         music_volume_db: Ajustement du volume de la musique en dB.
-        fade_in_ms: Durée du fondu d'entrée de la musique en ms.
-        fade_out_ms: Durée du fondu de sortie de la musique en ms.
+        fade_in_ms: Duree du fondu d'entree de la musique en ms.
+        fade_out_ms: Duree du fondu de sortie de la musique en ms.
         voice_format: Format de l'audio voix (mp3, wav, etc.).
 
     Returns:
@@ -46,20 +102,28 @@ def mix_voice_with_music(
             f"Impossible de lire le fichier musique '{music_path}' : {exc}"
         ) from exc
 
-    # Boucler la musique si elle est plus courte que la voix
-    voice_duration = len(voice)
-    while len(music) < voice_duration:
-        music = music + music
+    # Detecter le BPM et calculer l'intro (1 mesure = 4 temps)
+    bpm = _estimate_bpm(music)
+    intro_ms = int(4 * 60 / bpm * 1000)
+    logger.info("Intro musique : %dms (1 mesure a %.0f BPM)", intro_ms, bpm)
 
-    # Couper la musique a la duree de la voix
-    music = music[:voice_duration]
+    # Duree totale = intro + voix
+    total_duration = intro_ms + len(voice)
+
+    # Boucler la musique pour couvrir la duree totale
+    while len(music) < total_duration:
+        music = music + music
+    music = music[:total_duration]
 
     # Appliquer le volume et les fondus
     music = music + music_volume_db
     music = music.fade_in(fade_in_ms).fade_out(fade_out_ms)
 
-    # Superposer voix et musique
-    return voice.overlay(music)
+    # Voix precedee de silence (intro)
+    voice_with_intro = AudioSegment.silent(duration=intro_ms) + voice
+
+    # Superposer voix (decalee) et musique
+    return voice_with_intro.overlay(music)
 
 
 def export_audio(

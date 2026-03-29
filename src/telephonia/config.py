@@ -40,7 +40,7 @@ def get_default_messages(music_path: Optional[str] = None) -> list[SVIMessage]:
                 "Nous allons donner suite a votre appel."
             ),
             target_duration=10,
-            background_music=None,
+            background_music=music_path,
             music_volume_db=-15.0,
         ),
         SVIMessage(
@@ -68,7 +68,7 @@ def get_default_messages(music_path: Optional[str] = None) -> list[SVIMessage]:
                 "nous vous rappellerons dans les plus brefs delais."
             ),
             target_duration=30,
-            background_music=None,
+            background_music=music_path,
             music_volume_db=-15.0,
         ),
     ]
