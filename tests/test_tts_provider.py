@@ -137,6 +137,9 @@ class TestSynthesizeBatch:
             def synthesize(self, text: str) -> bytes:
                 return fake_mp3_bytes
 
+            def list_voices(self) -> list[dict]:
+                return []
+
         provider = FakeProvider()
         results = provider.synthesize_batch(["Un", "Deux", "Trois"])
 
@@ -198,6 +201,50 @@ class TestSynthesizeBatch:
         assert isinstance(results[0], bytes)
         assert isinstance(results[1], Exception)
         assert isinstance(results[2], bytes)
+
+
+class TestListVoices:
+    """Tests pour list_voices."""
+
+    @patch("telephonia.tts.requests.get")
+    def test_elevenlabs_list_voices(self, mock_get):
+        """ElevenLabsProvider.list_voices retourne id/name."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "voices": [
+                {"voice_id": "abc123", "name": "Alice"},
+                {"voice_id": "def456", "name": "Bob"},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        provider = ElevenLabsProvider(api_key="test-key")
+        voices = provider.list_voices()
+
+        assert len(voices) == 2
+        assert voices[0] == {"id": "abc123", "name": "Alice"}
+        assert voices[1] == {"id": "def456", "name": "Bob"}
+
+    @patch("telephonia.tts_provider.edge_tts")
+    def test_edge_list_voices_filters_fr(self, mock_edge_tts):
+        """EdgeTTSProvider.list_voices filtre sur fr-FR."""
+
+        async def fake_list_voices():
+            return [
+                {"ShortName": "fr-FR-DeniseNeural", "FriendlyName": "Denise", "Locale": "fr-FR"},
+                {"ShortName": "fr-FR-HenriNeural", "FriendlyName": "Henri", "Locale": "fr-FR"},
+                {"ShortName": "en-US-JennyNeural", "FriendlyName": "Jenny", "Locale": "en-US"},
+            ]
+
+        mock_edge_tts.list_voices = fake_list_voices
+
+        provider = EdgeTTSProvider()
+        voices = provider.list_voices()
+
+        assert len(voices) == 2
+        assert voices[0] == {"id": "fr-FR-DeniseNeural", "name": "Denise"}
+        assert voices[1] == {"id": "fr-FR-HenriNeural", "name": "Henri"}
 
 
 class TestProviderSelection:

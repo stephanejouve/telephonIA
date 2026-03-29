@@ -26,6 +26,8 @@ def reset_state():
     from telephonia.config import get_default_messages
 
     state.messages = get_default_messages(music_path=state.music_path)
+    state.voice_id = None
+    state.imported_g729 = set()
     yield
 
 
@@ -191,6 +193,69 @@ class TestJsonPersistence:
             state.output_dir = original_output
 
 
+class TestVoices:
+    """Tests pour GET /api/voices et PUT /api/voice."""
+
+    @patch("telephonia.web.api.create_tts_provider")
+    def test_get_voices(self, mock_create_provider, client):
+        """GET /api/voices retourne la liste des voix."""
+        mock_provider = MagicMock()
+        mock_provider.list_voices.return_value = [
+            {"id": "voice1", "name": "Voix 1"},
+            {"id": "voice2", "name": "Voix 2"},
+        ]
+        mock_provider.voice = "voice1"
+        mock_create_provider.return_value = mock_provider
+        # Pas de client attr → provider edge
+        del mock_provider.client
+
+        response = client.get("/api/voices")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["provider"] == "edge"
+        assert len(data["voices"]) == 2
+        assert data["current"] == "voice1"
+
+    def test_set_voice(self, client):
+        """PUT /api/voice met a jour state.voice_id."""
+        original = state.voice_id
+        try:
+            response = client.put("/api/voice", json={"voice_id": "fr-FR-HenriNeural"})
+            assert response.status_code == 200
+            assert response.json()["voice_id"] == "fr-FR-HenriNeural"
+            assert state.voice_id == "fr-FR-HenriNeural"
+        finally:
+            state.voice_id = original
+
+    @patch("telephonia.web.api.create_tts_provider")
+    def test_generate_uses_selected_voice(self, mock_create_provider, client, tmp_path):
+        """POST /api/generate passe la voix selectionnee a create_tts_provider."""
+        import io
+
+        from pydub.generators import Sine
+
+        tone = Sine(440).to_audio_segment(duration=2000)
+        buffer = io.BytesIO()
+        tone.export(buffer, format="mp3")
+        fake_audio = buffer.getvalue()
+
+        mock_provider = MagicMock()
+        mock_provider.synthesize_batch.side_effect = lambda texts: [fake_audio] * len(texts)
+        mock_provider.voice_format = "mp3"
+        mock_create_provider.return_value = mock_provider
+
+        original_output = state.output_dir
+        original_voice = state.voice_id
+        state.output_dir = str(tmp_path)
+        state.voice_id = "fr-FR-HenriNeural"
+        try:
+            client.post("/api/generate")
+            mock_create_provider.assert_called_once_with(voice="fr-FR-HenriNeural")
+        finally:
+            state.output_dir = original_output
+            state.voice_id = original_voice
+
+
 class TestShutdown:
     """Tests pour POST /api/shutdown."""
 
@@ -290,6 +355,214 @@ class TestGenerateMessages:
         assert response.status_code == 500
         data = response.json()
         assert "detail" in data
+
+
+class TestAudioUpload:
+    """Tests pour POST /api/audio/{name}/upload."""
+
+    def test_upload_audio_mp3(self, client, tmp_path):
+        """Upload MP3 → WAV telephonie (16kHz, mono, 16bit)."""
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            tone = Sine(440).to_audio_segment(duration=1000)
+            buffer = io.BytesIO()
+            tone.export(buffer, format="mp3")
+            mp3_content = buffer.getvalue()
+
+            response = client.post(
+                "/api/audio/pre_decroche/upload",
+                files={"file": ("test.mp3", mp3_content, "audio/mpeg")},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "ok"
+            assert data["name"] == "pre_decroche"
+
+            wav_path = os.path.join(str(tmp_path), "pre_decroche.wav")
+            assert os.path.exists(wav_path)
+
+            from pydub import AudioSegment
+
+            result = AudioSegment.from_wav(wav_path)
+            assert result.frame_rate == 16000
+            assert result.channels == 1
+            assert result.sample_width == 2
+        finally:
+            state.output_dir = original_output
+
+    def test_upload_audio_wav(self, client, tmp_path):
+        """Upload WAV source → WAV telephonie avec bonnes specs."""
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            tone = Sine(880).to_audio_segment(duration=500).set_frame_rate(44100).set_channels(2)
+            buffer = io.BytesIO()
+            tone.export(buffer, format="wav")
+            wav_content = buffer.getvalue()
+
+            response = client.post(
+                "/api/audio/attente/upload",
+                files={"file": ("source.wav", wav_content, "audio/wav")},
+            )
+            assert response.status_code == 200
+
+            wav_path = os.path.join(str(tmp_path), "attente.wav")
+            assert os.path.exists(wav_path)
+
+            from pydub import AudioSegment
+
+            result = AudioSegment.from_wav(wav_path)
+            assert result.frame_rate == 16000
+            assert result.channels == 1
+            assert result.sample_width == 2
+        finally:
+            state.output_dir = original_output
+
+    def test_upload_audio_invalid_name(self, client):
+        """Nom avec caracteres speciaux → 400."""
+        response = client.post(
+            "/api/audio/inv@lid!name/upload",
+            files={"file": ("test.mp3", b"\x00" * 100, "audio/mpeg")},
+        )
+        assert response.status_code == 400
+
+    def test_upload_audio_invalid_format(self, client):
+        """Fichier .txt → 400."""
+        response = client.post(
+            "/api/audio/pre_decroche/upload",
+            files={"file": ("notes.txt", b"Hello world", "text/plain")},
+        )
+        assert response.status_code == 400
+        assert "Format" in response.json()["detail"]
+
+    def test_upload_audio_unknown_message(self, client):
+        """Message inexistant → 404."""
+        tone = Sine(440).to_audio_segment(duration=500)
+        buffer = io.BytesIO()
+        tone.export(buffer, format="mp3")
+
+        response = client.post(
+            "/api/audio/message_fantome/upload",
+            files={"file": ("test.mp3", buffer.getvalue(), "audio/mpeg")},
+        )
+        assert response.status_code == 404
+
+    def test_upload_audio_with_music_mixes(self, client, tmp_path):
+        """Upload MP3 sur message has_music + musique dispo → mixe la musique."""
+        original_output = state.output_dir
+        original_music = state.music_path
+
+        # Creer un fichier musique de fond
+        music = Sine(330).to_audio_segment(duration=5000)
+        music_path = os.path.join(str(tmp_path), "musique.mp3")
+        music.export(music_path, format="mp3")
+        state.music_path = music_path
+        state.output_dir = str(tmp_path)
+
+        try:
+            # pre_decroche a has_music=True
+            voice = Sine(440).to_audio_segment(duration=1000)
+            buf = io.BytesIO()
+            voice.export(buf, format="mp3")
+
+            response = client.post(
+                "/api/audio/pre_decroche/upload",
+                files={"file": ("voix.mp3", buf.getvalue(), "audio/mpeg")},
+            )
+            assert response.status_code == 200
+
+            from pydub import AudioSegment
+
+            wav_path = os.path.join(str(tmp_path), "pre_decroche.wav")
+            result = AudioSegment.from_wav(wav_path)
+            # Le mix ajoute intro + outro, donc le WAV doit etre plus long
+            assert len(result) > 1000
+            assert result.frame_rate == 16000
+        finally:
+            state.output_dir = original_output
+            state.music_path = original_music
+
+    @patch("telephonia.web.api.convert_g729_to_wav")
+    def test_upload_g729_sets_flag(self, mock_convert, client, tmp_path):
+        """Upload G.729 → flag imported_g729 dans GET /api/messages."""
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            # Simuler la conversion : creer un fichier WAV factice
+            def fake_convert(input_path, output_path):
+                tone = Sine(440).to_audio_segment(duration=500)
+                tone.export(output_path, format="wav")
+                return output_path
+
+            mock_convert.side_effect = fake_convert
+
+            response = client.post(
+                "/api/audio/pre_decroche/upload",
+                files={"file": ("old.g729", b"\x00" * 100, "audio/octet-stream")},
+            )
+            assert response.status_code == 200
+
+            # Verifier le flag dans GET /api/messages
+            msgs = client.get("/api/messages").json()
+            pre = next(m for m in msgs if m["name"] == "pre_decroche")
+            assert pre["imported_g729"] is True
+
+            # Les autres messages ne sont pas marques
+            attente = next(m for m in msgs if m["name"] == "attente")
+            assert attente["imported_g729"] is False
+        finally:
+            state.output_dir = original_output
+
+    def test_upload_mp3_clears_g729_flag(self, client, tmp_path):
+        """Upload MP3 apres G.729 → flag imported_g729 efface."""
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        state.imported_g729.add("pre_decroche")
+        try:
+            tone = Sine(440).to_audio_segment(duration=500)
+            buf = io.BytesIO()
+            tone.export(buf, format="mp3")
+
+            response = client.post(
+                "/api/audio/pre_decroche/upload",
+                files={"file": ("voix.mp3", buf.getvalue(), "audio/mpeg")},
+            )
+            assert response.status_code == 200
+            assert "pre_decroche" not in state.imported_g729
+        finally:
+            state.output_dir = original_output
+
+
+class TestDeleteAudio:
+    """Tests pour DELETE /api/audio/{name}."""
+
+    def test_delete_audio_existing(self, client, tmp_path):
+        """DELETE audio existant → supprime le fichier."""
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            tone = Sine(440).to_audio_segment(duration=500)
+            wav_path = os.path.join(str(tmp_path), "pre_decroche.wav")
+            tone.export(wav_path, format="wav")
+            assert os.path.exists(wav_path)
+
+            response = client.delete("/api/audio/pre_decroche")
+            assert response.status_code == 200
+            assert response.json()["status"] == "ok"
+            assert not os.path.exists(wav_path)
+        finally:
+            state.output_dir = original_output
+
+    def test_delete_audio_not_found(self, client):
+        """DELETE audio inexistant → 404."""
+        response = client.delete("/api/audio/inexistant")
+        assert response.status_code == 404
+
+    def test_delete_audio_invalid_name(self, client):
+        """DELETE nom invalide → 400."""
+        response = client.delete("/api/audio/inv@lid!")
+        assert response.status_code == 400
 
 
 class TestMusicUpload:
