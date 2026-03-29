@@ -48,11 +48,64 @@ class TestGetMusicPath:
 class TestGetOutputDir:
     """Tests pour get_output_dir."""
 
-    def test_output_path(self):
-        """Le dossier output est sous la racine."""
+    def test_output_path_dev(self):
+        """En dev, le dossier output est sous la racine."""
         result = get_output_dir()
         assert result.endswith("output")
         assert os.path.dirname(result) == get_project_root()
+
+    @patch("telephonia.paths.platform.system", return_value="Windows")
+    @patch("telephonia.paths.sys")
+    @patch.dict(os.environ, {"LOCALAPPDATA": "C:\\Users\\test\\AppData\\Local"})
+    def test_output_path_frozen_windows(self, mock_sys, _mock_platform):
+        """En bundle Windows, output dans LOCALAPPDATA."""
+        mock_sys.frozen = True
+        mock_sys._MEIPASS = "C:\\tmp\\meipass"
+        mock_sys.executable = "C:\\Program Files\\telephonIA\\telephonIA.exe"
+        result = get_output_dir()
+        assert "AppData" in result
+        assert result.endswith(os.path.join("telephonIA", "output"))
+
+
+class TestGetAssetsDir:
+    """Tests pour get_assets_dir."""
+
+    def test_assets_dir_dev(self):
+        """En dev, le dossier assets est sous la racine."""
+        result = get_assets_dir()
+        assert result.endswith("assets")
+        assert os.path.dirname(result) == get_project_root()
+
+    @patch("telephonia.paths.sys")
+    def test_assets_dir_frozen(self, mock_sys):
+        """En bundle, assets est a cote de l'executable."""
+        mock_sys.frozen = True
+        mock_sys._MEIPASS = "/tmp/meipass"
+        mock_sys.executable = "/opt/telephonIA/telephonIA"
+        result = get_assets_dir()
+        assert result == os.path.join("/opt/telephonIA", "assets")
+
+
+class TestGetMusicPathFrozen:
+    """Tests pour get_music_path en contexte frozen Windows."""
+
+    @patch("telephonia.paths.platform.system", return_value="Windows")
+    @patch("telephonia.paths.sys")
+    @patch.dict(os.environ, {"LOCALAPPDATA": "C:\\Users\\test\\AppData\\Local"})
+    def test_music_fallback_localappdata(self, mock_sys, _mock_platform):
+        """En bundle Windows, fallback vers LOCALAPPDATA si absent a cote du exe."""
+        mock_sys.frozen = True
+        mock_sys._MEIPASS = "C:\\tmp\\meipass"
+        mock_sys.executable = "C:\\Program Files\\telephonIA\\telephonIA.exe"
+
+        def exists_side_effect(path):
+            return "AppData" in path
+
+        with patch("telephonia.paths.os.path.exists", side_effect=exists_side_effect):
+            result = get_music_path()
+        assert result is not None
+        assert "AppData" in result
+        assert result.endswith("musique_fond.mp3")
 
 
 class TestGetStaticDir:
@@ -85,13 +138,3 @@ class TestGetFfmpegPath:
         mock_sys.frozen = True
         mock_sys._MEIPASS = "/tmp/pyinstaller_bundle"
         assert get_ffmpeg_path() == os.path.join("/tmp/pyinstaller_bundle", "ffmpeg.exe")
-
-
-class TestGetAssetsDir:
-    """Tests pour get_assets_dir."""
-
-    def test_assets_dir(self):
-        """Le dossier assets est sous la racine."""
-        result = get_assets_dir()
-        assert result.endswith("assets")
-        assert os.path.dirname(result) == get_project_root()
