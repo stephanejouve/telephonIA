@@ -42,6 +42,14 @@ class SVIGenerator:
         self.output_dir = output_dir
         self.voice_format = voice_format
 
+    def _refresh_music(self, messages: list[SVIMessage]) -> None:
+        """Met a jour background_music selon la presence du fichier sur disque."""
+        music_path = get_music_path()
+        music_names = {i["name"] for i in MESSAGES_INFO if i.get("has_music")}
+        for msg in messages:
+            if msg.name in music_names:
+                msg.background_music = music_path
+
     def _process_audio(self, message: SVIMessage, voice_audio: bytes) -> dict:
         """Mixe et exporte un audio voix en WAV telephonie.
 
@@ -89,6 +97,7 @@ class SVIGenerator:
         Raises:
             GenerationError: Si la synthese, le mixage ou l'export echoue.
         """
+        self._refresh_music([message])
         os.makedirs(self.output_dir, exist_ok=True)
 
         try:
@@ -110,6 +119,7 @@ class SVIGenerator:
         """
         if messages is None:
             messages = get_default_messages(music_path=self.music_path)
+        self._refresh_music(messages)
 
         os.makedirs(self.output_dir, exist_ok=True)
 
