@@ -222,7 +222,11 @@ def update_message(name: str, body: MessageUpdate):
 
 @router.post("/generate", response_model=GenerateResponse)
 def generate_messages():
-    """Lance la generation TTS pour tous les messages."""
+    """Lance la generation TTS pour les messages non importes en G.729."""
+    messages_to_generate = [msg for msg in state.messages if msg.name not in state.imported_g729]
+    if not messages_to_generate:
+        return GenerateResponse(results=[], status="ok", message="Aucun message a generer")
+
     try:
         tts_provider = create_tts_provider(voice=state.voice_id)
         generator = SVIGenerator(
@@ -231,7 +235,7 @@ def generate_messages():
             output_dir=state.output_dir,
             voice_format=tts_provider.voice_format,
         )
-        results = generator.generate_all(messages=state.messages)
+        results = generator.generate_all(messages=messages_to_generate)
     except GenerationError as exc:
         logger.error("Erreur generation TTS : %s", exc)
         raise HTTPException(
@@ -244,9 +248,6 @@ def generate_messages():
             status_code=500,
             detail={"status": "error", "message": f"Erreur interne : {exc}"},
         ) from exc
-
-    state.imported_g729.clear()
-    state.save_messages()
 
     return GenerateResponse(
         results=[GenerateResult(name=r["name"], wav=r["wav"]) for r in results],
