@@ -13,6 +13,7 @@ from telephonia.tts_provider import (
     TTSProvider,
     create_tts_provider,
     get_elevenlabs_key,
+    normalize_text_fr,
 )
 
 
@@ -23,6 +24,35 @@ def fake_mp3_bytes():
     buffer = io.BytesIO()
     tone.export(buffer, format="mp3")
     return buffer.getvalue()
+
+
+class TestNormalizeTextFr:
+    """Tests pour normalize_text_fr."""
+
+    def test_www_dot(self):
+        assert "double vé" in normalize_text_fr("www.example.com")
+        assert "www" not in normalize_text_fr("www.example.com")
+
+    def test_www_standalone(self):
+        assert normalize_text_fr("www") == "double vé double vé double vé"
+
+    def test_http_removed(self):
+        result = normalize_text_fr("https://www.example.com")
+        assert "https" not in result
+        assert "double vé" in result
+
+    def test_domain_extensions(self):
+        assert "point com" in normalize_text_fr("example.com")
+        assert "point fr" in normalize_text_fr("example.fr")
+        assert "point org" in normalize_text_fr("example.org")
+        assert "point net" in normalize_text_fr("example.net")
+
+    def test_arobase(self):
+        assert "arobase" in normalize_text_fr("info@example.fr")
+
+    def test_plain_text_unchanged(self):
+        text = "Bonjour, nous sommes ouverts du lundi au vendredi."
+        assert normalize_text_fr(text) == text
 
 
 class TestTTSProviderInterface:
