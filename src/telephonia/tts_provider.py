@@ -3,6 +3,7 @@
 import asyncio
 import io
 import logging
+import re
 from abc import ABC, abstractmethod
 
 import edge_tts
@@ -11,6 +12,19 @@ import keyring
 from telephonia.tts import ElevenLabsTTS, NetworkError, TTSError
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_text_fr(text: str) -> str:
+    """Normalise le texte pour la prononciation francaise en synthese vocale."""
+    text = re.sub(r"https?://", "", text)
+    text = re.sub(r"\bwww\.", "double vé double vé double vé point ", text)
+    text = re.sub(r"\bwww\b", "double vé double vé double vé", text)
+    text = re.sub(r"\.com\b", " point com", text)
+    text = re.sub(r"\.fr\b", " point fr", text)
+    text = re.sub(r"\.org\b", " point org", text)
+    text = re.sub(r"\.net\b", " point net", text)
+    text = re.sub(r"@", " arobase ", text)
+    return text
 
 
 class TTSProvider(ABC):
@@ -67,7 +81,7 @@ class ElevenLabsProvider(TTSProvider):
 
     def synthesize(self, text: str) -> bytes:
         """Synthetise via l'API ElevenLabs."""
-        return self.client.synthesize(text)
+        return self.client.synthesize(normalize_text_fr(text))
 
     def list_voices(self) -> list[dict]:
         """Liste les voix ElevenLabs disponibles."""
@@ -115,7 +129,7 @@ class EdgeTTSProvider(TTSProvider):
 
     async def _synthesize_async(self, text: str) -> bytes:
         """Implementation async de la synthese Edge TTS."""
-        communicate = edge_tts.Communicate(text, voice=self.voice)
+        communicate = edge_tts.Communicate(normalize_text_fr(text), voice=self.voice)
         buffer = io.BytesIO()
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
