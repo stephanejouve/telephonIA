@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-03-30)
+
+### Documentation
+
+- Mettre a jour le README avec toutes les fonctionnalites
+  ([#30](https://github.com/stephanejouve/telephonIA/pull/30),
+  [`b08cbfe`](https://github.com/stephanejouve/telephonIA/commit/b08cbfeaf1085e0fbf5cbd9423293d4b0d7db7c4))
+
+### Features
+
+- Normaliser les URLs et termes web pour la prononciation francaise TTS
+  ([#30](https://github.com/stephanejouve/telephonIA/pull/30),
+  [`b08cbfe`](https://github.com/stephanejouve/telephonIA/commit/b08cbfeaf1085e0fbf5cbd9423293d4b0d7db7c4))
+
+- Normaliser les URLs pour la prononciation francaise TTS
+  ([#30](https://github.com/stephanejouve/telephonIA/pull/30),
+  [`b08cbfe`](https://github.com/stephanejouve/telephonIA/commit/b08cbfeaf1085e0fbf5cbd9423293d4b0d7db7c4))
+
+
 ## v1.4.10 (2026-03-29)
 
 ### Bug Fixes
