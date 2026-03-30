@@ -68,6 +68,11 @@ keyring set elevenlabs_api_key telephonia
 python -c "import keyring; keyring.set_password('elevenlabs_api_key', 'telephonia', 'VOTRE_CLE')"
 ```
 
+```powershell
+# Windows PowerShell (Credential Manager natif)
+cmdkey /generic:elevenlabs_api_key /user:telephonia /pass:VOTRE_CLE
+```
+
 Le trousseau utilise [keyring](https://pypi.org/project/keyring/) :
 - **macOS** : Trousseau d'acces (Keychain)
 - **Windows** : Credential Manager
@@ -192,6 +197,10 @@ disponibles.
 
 Voix par defaut : **Denise** (`XB0fDUnXU5powFXDhCwa`).
 Le selecteur de voix liste toutes les voix du compte ElevenLabs.
+
+> **Note** : si le selecteur de voix est vide, verifier qu'aucun VPN ou proxy
+> d'entreprise ne bloque l'acces aux serveurs Microsoft (Edge TTS) ou
+> ElevenLabs.
 
 ## Developpement
 
