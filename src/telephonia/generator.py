@@ -36,11 +36,18 @@ class SVIGenerator:
         music_path: str | None,
         output_dir: str,
         voice_format: str = "mp3",
+        filename_prefix: str = "",
     ):
         self.tts = tts
         self.music_path = music_path
         self.output_dir = output_dir
         self.voice_format = voice_format
+        self.filename_prefix = filename_prefix
+
+    def _wav_path(self, name: str) -> str:
+        """Chemin WAV complet avec prefixe optionnel."""
+        filename = f"{self.filename_prefix}_{name}.wav" if self.filename_prefix else f"{name}.wav"
+        return os.path.join(self.output_dir, filename)
 
     def _refresh_music(self, messages: list[SVIMessage]) -> None:
         """Met a jour background_music selon self.music_path (fourni par le state)."""
@@ -75,7 +82,7 @@ class SVIGenerator:
         except (FileNotFoundError, IOError) as exc:
             raise GenerationError(f"Mixage echoue pour '{message.name}' : {exc}") from exc
 
-        wav_path = os.path.join(self.output_dir, f"{message.name}.wav")
+        wav_path = self._wav_path(message.name)
         try:
             export_telephony(mixed, wav_path)
         except IOError as exc:

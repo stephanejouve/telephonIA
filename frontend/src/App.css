@@ -63,6 +63,66 @@ body {
   font-size: 0.95rem;
 }
 
+.prefix-field {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.prefix-field label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.prefix-field input {
+  width: 280px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.prefix-field input::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}
+
+.prefix-field input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.prefix-field input.prefix-input-error {
+  border-color: #ff8a80;
+}
+
+.prefix-error {
+  font-size: 0.75rem;
+  color: #ffcdd2;
+}
+
+.prefix-saved {
+  font-size: 0.75rem;
+  color: #b9f6ca;
+}
+
+.prefix-hint {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  max-width: 420px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
 /* Message Card */
 .message-card {
   background: white;

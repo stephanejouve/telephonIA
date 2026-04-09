@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-function MessageCard({ message, audioVersion, onSave, onAudioImport, onAudioDelete }) {
+function MessageCard({ message, audioVersion, prefix, onSave, onAudioImport, onAudioDelete }) {
   const [text, setText] = useState(message.text);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
@@ -156,7 +156,7 @@ function MessageCard({ message, audioVersion, onSave, onAudioImport, onAudioDele
             <a
               className="link-download"
               href={`/api/audio/${message.name}?v=${audioVersion}`}
-              download={`${message.name}.wav`}
+              download={prefix ? `${prefix}_${message.name}.wav` : `${message.name}.wav`}
             >
               Telecharger
             </a>
