@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-04-09)
+
+### Documentation
+
+- Ajouter commande PowerShell et note VPN au README
+  ([`35a9506`](https://github.com/stephanejouve/telephonIA/commit/35a95066141193bc00dd3c337c41b683ac834838))
+
+### Features
+
+- Ajouter identifiant de lot pour prefixer les fichiers WAV generes
+  ([#32](https://github.com/stephanejouve/telephonIA/pull/32),
+  [`c00be1a`](https://github.com/stephanejouve/telephonIA/commit/c00be1a5af0507208b88c03284c1a59cabc93194))
+
+
 ## v1.5.0 (2026-03-30)
 
 ### Documentation
