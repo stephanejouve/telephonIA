@@ -27,6 +27,7 @@ def reset_state():
 
     state.messages = get_default_messages(music_path=state.music_path)
     state.voice_id = None
+    state.prefix = ""
     state.imported_g729 = set()
     yield
 
@@ -254,6 +255,158 @@ class TestVoices:
         finally:
             state.output_dir = original_output
             state.voice_id = original_voice
+
+
+class TestPrefix:
+    """Tests pour GET /api/prefix et PUT /api/prefix."""
+
+    def test_get_prefix_default_empty(self, client):
+        """GET /api/prefix retourne une chaine vide par defaut."""
+        response = client.get("/api/prefix")
+        assert response.status_code == 200
+        assert response.json() == {"prefix": ""}
+
+    def test_set_prefix_valid(self, client):
+        """PUT /api/prefix avec valeur valide → 200 + state mis a jour."""
+        response = client.put("/api/prefix", json={"prefix": "mairie_cantine"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["prefix"] == "mairie_cantine"
+        assert state.prefix == "mairie_cantine"
+
+    def test_set_prefix_empty_clears(self, client):
+        """PUT /api/prefix avec chaine vide → 200, state vide."""
+        state.prefix = "ancien"
+        response = client.put("/api/prefix", json={"prefix": ""})
+        assert response.status_code == 200
+        assert response.json()["prefix"] == ""
+        assert state.prefix == ""
+
+    def test_set_prefix_trims_whitespace(self, client):
+        """PUT /api/prefix trime les espaces."""
+        response = client.put("/api/prefix", json={"prefix": "  demo  "})
+        assert response.status_code == 200
+        assert response.json()["prefix"] == "demo"
+
+    def test_set_prefix_invalid_chars(self, client):
+        """PUT /api/prefix avec caracteres interdits → 400."""
+        response = client.put("/api/prefix", json={"prefix": "mairie cantine!"})
+        assert response.status_code == 400
+        assert "Prefixe invalide" in response.json()["detail"]
+
+    def test_set_prefix_too_long(self, client):
+        """PUT /api/prefix avec > 64 caracteres → 400."""
+        response = client.put("/api/prefix", json={"prefix": "a" * 65})
+        assert response.status_code == 400
+
+    def test_set_prefix_persists_in_json(self, client, tmp_path):
+        """PUT /api/prefix → prefixe ecrit dans messages.json sous la cle _prefix."""
+        import json
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            response = client.put("/api/prefix", json={"prefix": "mairie"})
+            assert response.status_code == 200
+
+            json_path = os.path.join(str(tmp_path), "messages.json")
+            assert os.path.exists(json_path)
+            with open(json_path, encoding="utf-8") as f:
+                data = json.load(f)
+            assert data["_prefix"] == "mairie"
+        finally:
+            state.output_dir = original_output
+
+    def test_load_prefix_from_json(self, tmp_path):
+        """JSON contenant _prefix → state.prefix charge au demarrage."""
+        import json
+
+        os.makedirs(str(tmp_path), exist_ok=True)
+        json_path = os.path.join(str(tmp_path), "messages.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump({"_prefix": "persiste"}, f)
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            from telephonia.config import get_default_messages
+
+            state.messages = get_default_messages(music_path=state.music_path)
+            state.prefix = ""
+            state.load_saved_messages()
+            assert state.prefix == "persiste"
+        finally:
+            state.output_dir = original_output
+            state.prefix = ""
+
+    def test_load_prefix_invalid_ignored(self, tmp_path):
+        """JSON contenant _prefix invalide → prefixe ignore (reste vide)."""
+        import json
+
+        os.makedirs(str(tmp_path), exist_ok=True)
+        json_path = os.path.join(str(tmp_path), "messages.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump({"_prefix": "mechant prefixe !"}, f)
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            from telephonia.config import get_default_messages
+
+            state.messages = get_default_messages(music_path=state.music_path)
+            state.prefix = ""
+            state.load_saved_messages()
+            assert state.prefix == ""
+        finally:
+            state.output_dir = original_output
+
+    @patch("telephonia.web.api.create_tts_provider")
+    def test_generate_uses_prefix_in_filenames(self, mock_create_provider, client, tmp_path):
+        """POST /api/generate avec prefixe → fichiers WAV prefixes sur le disque."""
+        tone = Sine(440).to_audio_segment(duration=2000)
+        buffer = io.BytesIO()
+        tone.export(buffer, format="mp3")
+        fake_audio = buffer.getvalue()
+
+        mock_provider = MagicMock()
+        mock_provider.synthesize_batch.side_effect = lambda texts: [fake_audio] * len(texts)
+        mock_provider.voice_format = "mp3"
+        mock_create_provider.return_value = mock_provider
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        state.prefix = "mairie_cantine"
+        try:
+            response = client.post("/api/generate")
+            assert response.status_code == 200
+
+            for name in ("pre_decroche", "attente", "repondeur"):
+                expected = os.path.join(str(tmp_path), f"mairie_cantine_{name}.wav")
+                assert os.path.exists(expected), f"manquant : {expected}"
+                # Sans prefixe → ne doit PAS exister
+                assert not os.path.exists(os.path.join(str(tmp_path), f"{name}.wav"))
+        finally:
+            state.output_dir = original_output
+
+    def test_get_audio_uses_prefix(self, client, tmp_path):
+        """GET /api/audio/{name} sert le fichier prefixe et le telecharge sous ce nom."""
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        state.prefix = "demo"
+        try:
+            tone = Sine(440).to_audio_segment(duration=500)
+            wav_path = os.path.join(str(tmp_path), "demo_pre_decroche.wav")
+            tone.export(wav_path, format="wav")
+
+            response = client.get("/api/audio/pre_decroche")
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "audio/wav"
+            # Le Content-Disposition doit proposer le nom prefixe
+            disp = response.headers.get("content-disposition", "")
+            assert "demo_pre_decroche.wav" in disp
+        finally:
+            state.output_dir = original_output
 
 
 class TestShutdown:

@@ -229,6 +229,58 @@ class TestSVIGenerator:
             generator.generate_message(message)
 
 
+class TestFilenamePrefix:
+    """Tests pour le parametre filename_prefix du SVIGenerator."""
+
+    def test_generate_without_prefix(self, mock_tts, tmp_path):
+        """Sans prefixe → fichiers nommes <name>.wav."""
+        generator = SVIGenerator(
+            tts=mock_tts, music_path=None, output_dir=str(tmp_path), voice_format="wav"
+        )
+        message = SVIMessage(name="test", text="Bonjour", target_duration=5)
+
+        result = generator.generate_message(message)
+
+        assert result["wav"] == os.path.join(str(tmp_path), "test.wav")
+        assert os.path.exists(result["wav"])
+
+    def test_generate_with_prefix(self, mock_tts, tmp_path):
+        """Avec prefixe → fichiers nommes <prefix>_<name>.wav."""
+        generator = SVIGenerator(
+            tts=mock_tts,
+            music_path=None,
+            output_dir=str(tmp_path),
+            voice_format="wav",
+            filename_prefix="mairie_cantine",
+        )
+        message = SVIMessage(name="pre_decroche", text="Bonjour", target_duration=5)
+
+        result = generator.generate_message(message)
+
+        expected = os.path.join(str(tmp_path), "mairie_cantine_pre_decroche.wav")
+        assert result["wav"] == expected
+        assert os.path.exists(expected)
+        # Le fichier non prefixe ne doit pas exister
+        assert not os.path.exists(os.path.join(str(tmp_path), "pre_decroche.wav"))
+
+    def test_generate_all_with_prefix(self, mock_tts, tmp_path):
+        """generate_all avec prefixe → tous les fichiers prefixes."""
+        generator = SVIGenerator(
+            tts=mock_tts,
+            music_path=None,
+            output_dir=str(tmp_path),
+            voice_format="wav",
+            filename_prefix="demo",
+        )
+
+        results = generator.generate_all()
+
+        assert len(results) == 3
+        for result in results:
+            assert os.path.basename(result["wav"]).startswith("demo_")
+            assert os.path.exists(result["wav"])
+
+
 class TestMusicRefresh:
     """Tests pour _refresh_music qui utilise self.music_path."""
 

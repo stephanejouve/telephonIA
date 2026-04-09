@@ -10,6 +10,7 @@ function App() {
   const [error, setError] = useState(null);
   const [audioVersion, setAudioVersion] = useState(0);
   const [serverDown, setServerDown] = useState(false);
+  const [prefix, setPrefix] = useState("");
 
   const fetchMessages = async () => {
     try {
@@ -23,8 +24,37 @@ function App() {
     }
   };
 
+  const fetchPrefix = async () => {
+    try {
+      const res = await fetch("/api/prefix");
+      if (!res.ok) return;
+      const data = await res.json();
+      setPrefix(data.prefix ?? "");
+    } catch {
+      // silencieux : endpoint optionnel
+    }
+  };
+
+  const savePrefix = async (newPrefix) => {
+    const res = await fetch("/api/prefix", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix: newPrefix }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || `Erreur ${res.status}`);
+    }
+    const data = await res.json();
+    setPrefix(data.prefix ?? "");
+    await fetchMessages();
+    setAudioVersion((v) => v + 1);
+    return data.prefix ?? "";
+  };
+
   useEffect(() => {
     fetchMessages();
+    fetchPrefix();
   }, []);
 
   // Health check : detecter l'arret du serveur
@@ -69,6 +99,30 @@ function App() {
   };
 
   const handleGenerate = async () => {
+    // Alerte si l'identifiant de lot est vide : demander une racine generique
+    if (!prefix) {
+      const entered = window.prompt(
+        "Choisir une racine generique pour les 3 fichiers WAV.\n" +
+          "Exemple : mairie_cantine (produira mairie_cantine_pre_decroche.wav, etc.)\n\n" +
+          "Laisser vide et valider pour generer sans prefixe.",
+        "mairie_cantine"
+      );
+      if (entered === null) return null; // annulation
+      const cleaned = entered.trim();
+      if (cleaned && !/^[a-zA-Z0-9_-]{0,64}$/.test(cleaned)) {
+        window.alert(
+          "Prefixe invalide. Caracteres autorises : a-z, A-Z, 0-9, _, - (64 max)"
+        );
+        return null;
+      }
+      try {
+        await savePrefix(cleaned);
+      } catch (err) {
+        window.alert("Impossible d'enregistrer le prefixe : " + err.message);
+        return null;
+      }
+    }
+
     const imported = messages.filter((m) => m.imported_g729);
     if (imported.length > 0) {
       const names = imported.map((m) => m.label).join(", ");
@@ -103,13 +157,14 @@ function App() {
 
   return (
     <div className="app">
-      <Header />
+      <Header prefix={prefix} onPrefixChange={savePrefix} />
       {error && <div className="error-banner">{error}</div>}
       {messages.map((msg) => (
         <MessageCard
           key={msg.name}
           message={msg}
           audioVersion={audioVersion}
+          prefix={prefix}
           onSave={handleSave}
           onAudioImport={handleAudioImport}
           onAudioDelete={handleAudioDelete}

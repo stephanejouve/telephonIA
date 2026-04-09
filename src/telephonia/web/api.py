@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 _VALID_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+_VALID_PREFIX_RE = re.compile(r"^[a-zA-Z0-9_-]{0,64}$")
 _MAX_MUSIC_SIZE = 20 * 1024 * 1024  # 20 Mo
 
 
@@ -52,6 +53,12 @@ class VoiceUpdate(BaseModel):
     voice_id: str
 
 
+class PrefixUpdate(BaseModel):
+    """Mise a jour de l'identifiant de lot (prefixe des fichiers generes)."""
+
+    prefix: str
+
+
 class GenerateResult(BaseModel):
     """Resultat de generation d'un message."""
 
@@ -77,6 +84,7 @@ class AppState:
         self.music_path = get_music_path()
         self.output_dir = get_output_dir()
         self.voice_id: str | None = None
+        self.prefix: str = ""
         self.imported_g729: set[str] = set()
         self.messages: list[SVIMessage] = get_default_messages(music_path=self.music_path)
         self.load_saved_messages()
@@ -90,6 +98,8 @@ class AppState:
         data = {msg.name: msg.text for msg in self.messages}
         if self.voice_id:
             data["_voice_id"] = self.voice_id
+        if self.prefix:
+            data["_prefix"] = self.prefix
         if self.imported_g729:
             data["_imported_g729"] = sorted(self.imported_g729)
         # Persister music_path (None = pas de musique)
@@ -114,6 +124,9 @@ class AppState:
             for name, text in data.items():
                 if name == "_voice_id":
                     self.voice_id = text
+                elif name == "_prefix":
+                    if isinstance(text, str) and _VALID_PREFIX_RE.match(text):
+                        self.prefix = text
                 elif name == "_imported_g729":
                     self.imported_g729 = set(text) if isinstance(text, list) else set()
                 elif name == "_music_path":
@@ -131,9 +144,15 @@ class AppState:
         except (json.JSONDecodeError, PermissionError, OSError) as exc:
             logger.warning("Impossible de charger messages.json : %s", exc)
 
+    def _wav_filename(self, name: str) -> str:
+        """Retourne le nom de fichier WAV (avec prefixe si defini)."""
+        if self.prefix:
+            return f"{self.prefix}_{name}.wav"
+        return f"{name}.wav"
+
     def _wav_path(self, name: str) -> str:
         """Retourne le chemin WAV pour un nom de message."""
-        return os.path.join(self.output_dir, f"{name}.wav")
+        return os.path.join(self.output_dir, self._wav_filename(name))
 
     def get_message(self, name: str) -> SVIMessage | None:
         for msg in self.messages:
@@ -186,6 +205,26 @@ def set_voice(body: VoiceUpdate):
     state.voice_id = body.voice_id
     state.save_messages()
     return {"status": "ok", "voice_id": state.voice_id}
+
+
+@router.get("/prefix")
+def get_prefix():
+    """Retourne l'identifiant de lot courant."""
+    return {"prefix": state.prefix}
+
+
+@router.put("/prefix")
+def set_prefix(body: PrefixUpdate):
+    """Definit l'identifiant de lot prefixant les fichiers generes."""
+    prefix = body.prefix.strip()
+    if not _VALID_PREFIX_RE.match(prefix):
+        raise HTTPException(
+            status_code=400,
+            detail="Prefixe invalide. Caracteres autorises : a-z, A-Z, 0-9, _, - (64 max)",
+        )
+    state.prefix = prefix
+    state.save_messages()
+    return {"status": "ok", "prefix": state.prefix}
 
 
 @router.get("/messages", response_model=list[MessageResponse])
@@ -244,6 +283,7 @@ def generate_messages():
             music_path=state.music_path,
             output_dir=state.output_dir,
             voice_format=tts_provider.voice_format,
+            filename_prefix=state.prefix,
         )
         results = generator.generate_all(messages=messages_to_generate)
     except GenerationError as exc:
@@ -286,7 +326,7 @@ def get_audio(name: str):
     return FileResponse(
         wav_path,
         media_type="audio/wav",
-        filename=f"{name}.wav",
+        filename=state._wav_filename(name),
         headers={"Cache-Control": "no-store"},
     )
 
