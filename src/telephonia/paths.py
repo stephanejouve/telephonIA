@@ -5,15 +5,19 @@ import platform
 import sys
 
 
-def get_project_root() -> str:
-    """Retourne la racine du projet.
+def _is_pyinstaller() -> bool:
+    """Detecte un contexte PyInstaller (Windows .exe)."""
+    return getattr(sys, "frozen", False) is True
 
-    En bundle PyInstaller, retourne sys._MEIPASS.
-    En dev, remonte 2 niveaux depuis telephonia/ (src/telephonia -> racine).
-    """
-    if getattr(sys, "frozen", False):
-        return sys._MEIPASS
-    return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+def _is_py2app() -> bool:
+    """Detecte un contexte py2app (macOS .app)."""
+    return getattr(sys, "frozen", False) == "macosx_app"
+
+
+def _is_frozen() -> bool:
+    """Detecte tout contexte bundle (PyInstaller ou py2app)."""
+    return bool(getattr(sys, "frozen", False))
 
 
 def _get_exe_dir() -> str:
@@ -31,13 +35,49 @@ def _get_user_data_dir() -> str:
     return os.path.join(base, "telephonIA")
 
 
+def _get_macos_bundle_dir() -> str:
+    """Retourne le dossier python_backend/ dans le bundle macOS.
+
+    RESOURCEPATH (defini par le wrapper shell ou py2app) est la source de verite.
+    Fallback sur sys.executable si absent (ne devrait pas arriver en bundle).
+    """
+    resource_path = os.environ.get("RESOURCEPATH")
+    if resource_path:
+        return resource_path
+    return os.path.dirname(os.path.abspath(sys.executable))
+
+
+def _get_macos_data_dir() -> str:
+    """Retourne ~/Library/Application Support/telephonIA/ (writable)."""
+    return os.path.join(
+        os.path.expanduser("~"), "Library", "Application Support", "telephonIA"
+    )
+
+
+def get_project_root() -> str:
+    """Retourne la racine du projet.
+
+    En bundle py2app, retourne le dossier python_backend/.
+    En bundle PyInstaller, retourne sys._MEIPASS.
+    En dev, remonte 2 niveaux depuis telephonia/ (src/telephonia -> racine).
+    """
+    if _is_py2app():
+        return _get_macos_bundle_dir()
+    if _is_pyinstaller():
+        return sys._MEIPASS
+    return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
 def get_assets_dir() -> str:
     """Retourne le chemin du dossier assets.
 
-    En bundle, cherche a cote de l'executable (lecture seule OK).
-    En dev, sous la racine du projet.
+    En py2app : {bundle_dir}/assets (lecture seule dans le .app).
+    En PyInstaller : a cote de l'executable.
+    En dev : sous la racine du projet.
     """
-    if getattr(sys, "frozen", False):
+    if _is_py2app():
+        return os.path.join(_get_macos_bundle_dir(), "assets")
+    if _is_frozen():
         return os.path.join(_get_exe_dir(), "assets")
     return os.path.join(get_project_root(), "assets")
 
@@ -45,10 +85,13 @@ def get_assets_dir() -> str:
 def get_music_upload_dir() -> str:
     """Retourne le dossier pour les uploads musique (toujours writable).
 
+    En py2app : ~/Library/Application Support/telephonIA/assets.
     En bundle Windows : %LOCALAPPDATA%/telephonIA/assets.
     En dev : {racine}/assets.
     """
-    if getattr(sys, "frozen", False) and platform.system() == "Windows":
+    if _is_py2app():
+        return os.path.join(_get_macos_data_dir(), "assets")
+    if _is_frozen() and platform.system() == "Windows":
         return os.path.join(_get_user_data_dir(), "assets")
     return os.path.join(get_project_root(), "assets")
 
@@ -76,11 +119,13 @@ def get_music_path() -> str | None:
 def get_output_dir() -> str:
     """Retourne le chemin du dossier de sortie.
 
-    En bundle Windows, utilise %LOCALAPPDATA%/telephonIA/output pour eviter
-    les problemes de permissions dans C:\\Program Files.
-    En dev, sous la racine du projet.
+    En py2app : ~/Library/Application Support/telephonIA/output.
+    En bundle Windows : %LOCALAPPDATA%/telephonIA/output.
+    En dev : sous la racine du projet.
     """
-    if getattr(sys, "frozen", False) and platform.system() == "Windows":
+    if _is_py2app():
+        return os.path.join(_get_macos_data_dir(), "output")
+    if _is_frozen() and platform.system() == "Windows":
         return os.path.join(_get_user_data_dir(), "output")
     return os.path.join(get_project_root(), "output")
 
@@ -88,10 +133,13 @@ def get_output_dir() -> str:
 def get_static_dir() -> str:
     """Retourne le chemin vers les fichiers statiques (build React).
 
-    En bundle PyInstaller, pointe vers {MEIPASS}/static.
-    En dev, pointe vers web/static.
+    En py2app : {bundle_dir}/static.
+    En PyInstaller : {MEIPASS}/static.
+    En dev : web/static.
     """
-    if getattr(sys, "frozen", False):
+    if _is_py2app():
+        return os.path.join(_get_macos_bundle_dir(), "static")
+    if _is_pyinstaller():
         return os.path.join(sys._MEIPASS, "static")
     return os.path.join(os.path.dirname(__file__), "web", "static")
 
@@ -99,9 +147,31 @@ def get_static_dir() -> str:
 def get_ffmpeg_path() -> str:
     """Retourne le chemin ffmpeg.
 
-    En bundle PyInstaller, ffmpeg.exe est embarque dans _MEIPASS.
-    En dev, on utilise le ffmpeg systeme.
+    En py2app : ffmpeg dans le bundle macOS.
+    En PyInstaller : ffmpeg.exe dans _MEIPASS.
+    En dev : ffmpeg systeme.
     """
-    if getattr(sys, "frozen", False):
+    if _is_py2app():
+        return os.path.join(_get_macos_bundle_dir(), "ffmpeg")
+    if _is_pyinstaller():
         return os.path.join(sys._MEIPASS, "ffmpeg.exe")
     return "ffmpeg"
+
+
+def get_ffprobe_path() -> str:
+    """Retourne le chemin ffprobe.
+
+    ffprobe est un binaire distinct de ffmpeg — pydub en a besoin pour
+    introspecter les fichiers audio (duree, codec, channels). Reutiliser
+    ffmpeg comme ffprobe fonctionne par coincidence sur certains cas mais
+    casse des qu'une commande specifique a ffprobe est invoquee.
+
+    En py2app : ffprobe dans le bundle macOS.
+    En PyInstaller : ffprobe.exe dans _MEIPASS.
+    En dev : ffprobe systeme.
+    """
+    if _is_py2app():
+        return os.path.join(_get_macos_bundle_dir(), "ffprobe")
+    if _is_pyinstaller():
+        return os.path.join(sys._MEIPASS, "ffprobe.exe")
+    return "ffprobe"

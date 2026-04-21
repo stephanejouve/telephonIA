@@ -81,13 +81,19 @@ class AppState:
     """Etat en memoire de l'application."""
 
     def __init__(self):
-        self.music_path = get_music_path()
+        self.music_path: str | None = None
         self.output_dir = get_output_dir()
         self.voice_id: str | None = None
         self.prefix: str = ""
         self.imported_g729: set[str] = set()
-        self.messages: list[SVIMessage] = get_default_messages(music_path=self.music_path)
+        self._music_path_from_json = False
+        self.messages: list[SVIMessage] = get_default_messages(music_path=None)
         self.load_saved_messages()
+        # Premiere utilisation (pas de _music_path dans le JSON) : fallback scan disque
+        if not self._music_path_from_json:
+            self.music_path = get_music_path()
+            for msg in self.messages:
+                msg.background_music = self.music_path
 
     def _messages_json_path(self) -> str:
         """Retourne le chemin du fichier de persistance JSON."""
@@ -131,6 +137,7 @@ class AppState:
                     self.imported_g729 = set(text) if isinstance(text, list) else set()
                 elif name == "_music_path":
                     # Restaurer music_path (None = explicitement desactive)
+                    self._music_path_from_json = True
                     if text is None:
                         self.music_path = None
                     elif isinstance(text, str) and os.path.exists(text):

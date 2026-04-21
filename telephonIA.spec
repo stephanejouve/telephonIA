@@ -8,11 +8,26 @@ block_cipher = None
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(SPEC))
 
-# ffmpeg.exe embarque (Windows uniquement)
-ffmpeg_binary = os.path.join(PROJECT_ROOT, "scripts", "ffmpeg", "ffmpeg.exe")
+# ffmpeg.exe + ffprobe.exe embarques (Windows uniquement). Les deux sont
+# necessaires : ffmpeg pour l'encodage/mixage, ffprobe pour l'introspection
+# (duree, codec, channels) appelee par pydub. Build bloquant si l'un manque
+# — sinon le .exe produit crashe silencieusement au premier mixage TTS
+# avec `[WinError 2] Le fichier specifie est introuvable`.
 binaries = []
-if platform.system() == "Windows" and os.path.exists(ffmpeg_binary):
+if platform.system() == "Windows":
+    ffmpeg_binary = os.path.join(PROJECT_ROOT, "scripts", "ffmpeg", "ffmpeg.exe")
+    ffprobe_binary = os.path.join(PROJECT_ROOT, "scripts", "ffmpeg", "ffprobe.exe")
+    missing = [p for p in (ffmpeg_binary, ffprobe_binary) if not os.path.exists(p)]
+    if missing:
+        raise FileNotFoundError(
+            "Binaires ffmpeg/ffprobe manquants pour le build Windows :\n  "
+            + "\n  ".join(missing)
+            + "\n\nTelecharger ffmpeg-release-essentials.zip depuis "
+            "https://www.gyan.dev/ffmpeg/builds/ et placer ffmpeg.exe + "
+            "ffprobe.exe dans scripts/ffmpeg/. Voir docs/DEPLOIEMENT_WINDOWS.md."
+        )
     binaries.append((ffmpeg_binary, "."))
+    binaries.append((ffprobe_binary, "."))
 
 # Fichiers statiques (build React)
 static_dir = os.path.join(PROJECT_ROOT, "src", "telephonia", "web", "static")
@@ -70,6 +85,7 @@ exe = EXE(
     a.datas,
     [],
     name="telephonIA",
+    icon=os.path.join(PROJECT_ROOT, "scripts", "icons", "telephonIA.ico"),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

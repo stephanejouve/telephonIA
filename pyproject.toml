@@ -32,6 +32,7 @@ isort = ">=5.12"
 httpx = ">=0.28"
 pre-commit = ">=3.0"
 pyinstaller = {version = ">=6.0", python = ">=3.11,<3.15"}
+py2app = {version = ">=0.28", markers = "sys_platform == 'darwin'"}
 
 [build-system]
 requires = ["poetry-core"]
