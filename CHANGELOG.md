@@ -2,6 +2,75 @@
 
 <!-- version list -->
 
+## v1.7.0 (2026-04-21)
+
+### Bug Fixes
+
+- **release**: Align publish-action sur v10.5.3 (version identique a semantic-release)
+  ([#36](https://github.com/stephanejouve/telephonIA/pull/36),
+  [`1031e27`](https://github.com/stephanejouve/telephonIA/commit/1031e274635bb285358daf4d58b3990cb11ad2e4))
+
+- **release**: GitHub App token bypass branch protection main
+  ([#36](https://github.com/stephanejouve/telephonIA/pull/36),
+  [`1031e27`](https://github.com/stephanejouve/telephonIA/commit/1031e274635bb285358daf4d58b3990cb11ad2e4))
+
+- **release**: GitHub App token pour bypass branch protection main
+  ([#36](https://github.com/stephanejouve/telephonIA/pull/36),
+  [`1031e27`](https://github.com/stephanejouve/telephonIA/commit/1031e274635bb285358daf4d58b3990cb11ad2e4))
+
+- **release**: Remet fetch-depth: 0 (requis par PSR pour walker l'historique)
+  ([#36](https://github.com/stephanejouve/telephonIA/pull/36),
+  [`1031e27`](https://github.com/stephanejouve/telephonIA/commit/1031e274635bb285358daf4d58b3990cb11ad2e4))
+
+- **release**: Retire fetch-depth: 0 (PSR v10.5+ deshallow auto)
+  ([#36](https://github.com/stephanejouve/telephonIA/pull/36),
+  [`1031e27`](https://github.com/stephanejouve/telephonIA/commit/1031e274635bb285358daf4d58b3990cb11ad2e4))
+
+### Code Style
+
+- Black + isort format auto sur paths.py + test_paths.py (line-length=100)
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+### Continuous Integration
+
+- Codecov v5 + windows spec guardrail + macOS py2app sanity
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+- Codecov.yml (thresholds + ignore paths) + README badges CI & codecov
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+- Fix secret name CODECOV_TOKEN -> CODECOV_TOKEN_TELEPHONIA
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+- Refresh poetry.lock pour suivre l'ajout [tool.coverage] dans pyproject
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+- Revert to CODECOV_TOKEN (secret auto-provisioned par Codecov app)
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+### Features
+
+- **bundle**: Embed ffmpeg+ffprobe, icons, py2app macOS bundle, LGPL attribution
+  ([#33](https://github.com/stephanejouve/telephonIA/pull/33),
+  [`b9510c3`](https://github.com/stephanejouve/telephonIA/commit/b9510c32ac6c3b39dc488cab25e1e2822cfc4956))
+
+- **release**: Ffprobe download + SLSA attestation + fix GH_TOKEN -> GITHUB_TOKEN
+  ([#35](https://github.com/stephanejouve/telephonIA/pull/35),
+  [`0adf8c6`](https://github.com/stephanejouve/telephonIA/commit/0adf8c6dc64ac4151b4bdf7454ce42d42f9cc22a))
+
+### Testing
+
+- **web_api**: Skip 5 tests sur fixtures MP3/WAV synthetiques non-parsables par ffmpeg
+  ([#34](https://github.com/stephanejouve/telephonIA/pull/34),
+  [`12e02c4`](https://github.com/stephanejouve/telephonIA/commit/12e02c4e0a86070531c08c3f7bfb0d2b68e12689))
+
+
 ## v1.6.0 (2026-04-09)
 
 ### Documentation
