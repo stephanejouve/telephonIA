@@ -1,0 +1,35 @@
+# Config Codecov pour telephonIA — voir https://docs.codecov.com/docs/codecovyml-reference
+#
+# Cible de couverture conservatrice pour demarrer (tests existants couvrent
+# paths.py a 100% ; tts.py / web/*.py n'ont pas encore de tests unitaires,
+# coverage globale locale ~10%). On monte la cible au fur et a mesure que
+# les modules web/ / tts/ gagnent des tests.
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto         # compare au commit de base de la PR
+        threshold: 1%        # tolere -1% sans bloquer (reduit les faux rouges)
+        base: auto
+    patch:
+      default:
+        target: 80%          # tout nouveau code doit etre couvert a 80%+
+        threshold: 0%
+
+# Chemins ignores pour ne pas diluer les metriques.
+ignore:
+  - "tests/"
+  - "scripts/"
+  - "macos/"
+  - "frontend/"
+  - "docs/"
+  - "src/telephonia/__init__.py"    # version only
+
+# Comments Codecov sur les PR : resume + files changed + footer.
+comment:
+  layout: "reach, diff, flags, files, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
