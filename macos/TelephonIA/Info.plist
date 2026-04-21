@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>fr</string>
+	<key>CFBundleExecutable</key>
+	<string>telephonIA</string>
+	<key>CFBundleIdentifier</key>
+	<string>eu.alliancejr.telephonIA</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>telephonIA</string>
+	<key>CFBundleDisplayName</key>
+	<string>telephonIA</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.6.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>11.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Cles py2app : le bootstrap telephonia-web lit le plist du .app englobant -->
+	<key>PyMainFileNames</key>
+	<array>
+		<string>__boot__</string>
+	</array>
+	<key>PyRuntimeLocations</key>
+	<array>
+		<string>@executable_path/../Frameworks/Python.framework/Versions/3.11/Python</string>
+		<string>/usr/local/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/Python</string>
+	</array>
+	<key>PyOptions</key>
+	<dict>
+		<key>alias</key>
+		<integer>0</integer>
+		<key>argv_emulation</key>
+		<integer>0</integer>
+		<key>emulate_shell_environment</key>
+		<integer>0</integer>
+		<key>no_chdir</key>
+		<integer>0</integer>
+		<key>site_packages</key>
+		<integer>0</integer>
+		<key>use_pythonpath</key>
+		<integer>0</integer>
+		<key>verbose</key>
+		<integer>0</integer>
+	</dict>
+</dict>
+</plist>

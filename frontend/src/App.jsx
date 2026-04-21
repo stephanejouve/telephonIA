@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import FAQ from "./components/FAQ";
 import GenerateButton from "./components/GenerateButton";
 import Header from "./components/Header";
 import MessageCard from "./components/MessageCard";
@@ -11,6 +12,7 @@ function App() {
   const [audioVersion, setAudioVersion] = useState(0);
   const [serverDown, setServerDown] = useState(false);
   const [prefix, setPrefix] = useState("");
+  const [showFAQ, setShowFAQ] = useState(false);
 
   const fetchMessages = async () => {
     try {
@@ -157,7 +159,8 @@ function App() {
 
   return (
     <div className="app">
-      <Header prefix={prefix} onPrefixChange={savePrefix} />
+      <Header prefix={prefix} onPrefixChange={savePrefix} onOpenFAQ={() => setShowFAQ(true)} />
+      {showFAQ && <FAQ onClose={() => setShowFAQ(false)} />}
       {error && <div className="error-banner">{error}</div>}
       {messages.map((msg) => (
         <MessageCard

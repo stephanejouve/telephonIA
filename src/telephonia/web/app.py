@@ -8,7 +8,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from telephonia.paths import get_ffmpeg_path, get_static_dir
+from telephonia.paths import get_ffmpeg_path, get_ffprobe_path, get_static_dir
 from telephonia.web.api import router
 from telephonia.web.middleware import LoggingMiddleware
 
@@ -43,13 +43,18 @@ def get_lan_ip() -> str:
 
 
 def _configure_ffmpeg():
-    """Configure pydub pour utiliser le ffmpeg embarque si en bundle."""
+    """Configure pydub pour utiliser ffmpeg+ffprobe embarques si en bundle.
+
+    En dev (get_ffmpeg_path() == "ffmpeg"), pydub utilise ce qui est dans
+    le PATH systeme — rien a configurer. En bundle, on pointe AudioSegment
+    vers les binaires embarques (ffmpeg.exe + ffprobe.exe sur Windows,
+    ffmpeg + ffprobe sur macOS).
+    """
     if get_ffmpeg_path() != "ffmpeg":
         from pydub import AudioSegment
 
-        ffmpeg = get_ffmpeg_path()
-        AudioSegment.converter = ffmpeg
-        AudioSegment.ffprobe = ffmpeg
+        AudioSegment.converter = get_ffmpeg_path()
+        AudioSegment.ffprobe = get_ffprobe_path()
 
 
 def main():
@@ -61,13 +66,17 @@ def main():
     local_url = f"http://localhost:{port}"
     lan_url = f"http://{lan_ip}:{port}"
 
+    # Protocole pour l'app macOS Swift : lit cette ligne sur stdout
+    print(f"PORT:{port}", flush=True)
+
     print("telephonIA — Interface web")
     print("=" * 50)
     print(f"  Local : {local_url}")
     print(f"  LAN   : {lan_url}")
     print("=" * 50)
 
-    webbrowser.open(local_url)
+    if not os.environ.get("TELEPHONIA_APP_MODE"):
+        webbrowser.open(local_url)
 
     app = create_app()
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")

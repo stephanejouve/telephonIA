@@ -194,6 +194,77 @@ class TestJsonPersistence:
             state.output_dir = original_output
 
 
+class TestMusicPathFromJson:
+    """Tests pour le bug musique mixee sans selection utilisateur."""
+
+    def test_music_path_null_in_json_stays_none(self, tmp_path):
+        """JSON avec _music_path: null → music_path reste None malgre fichier sur disque."""
+        import json
+
+        from telephonia.config import get_default_messages
+
+        os.makedirs(str(tmp_path), exist_ok=True)
+        json_path = os.path.join(str(tmp_path), "messages.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump({"_music_path": None}, f)
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            state.music_path = None
+            state._music_path_from_json = False
+            state.messages = get_default_messages(music_path=None)
+            with patch("telephonia.web.api.get_music_path", return_value="/fake/musique.mp3"):
+                state.load_saved_messages()
+                # Le JSON dit explicitement null → pas de fallback
+                assert state._music_path_from_json is True
+                assert state.music_path is None
+        finally:
+            state.output_dir = original_output
+
+    def test_no_json_falls_back_to_get_music_path(self, tmp_path):
+        """Pas de messages.json → fallback sur get_music_path() (retrocompat)."""
+        from telephonia.config import get_default_messages
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            state.music_path = None
+            state._music_path_from_json = False
+            state.messages = get_default_messages(music_path=None)
+            state.load_saved_messages()
+            # Pas de JSON → flag reste False
+            assert state._music_path_from_json is False
+        finally:
+            state.output_dir = original_output
+
+    def test_music_path_valid_in_json_restored(self, tmp_path):
+        """JSON avec _music_path pointant vers un fichier existant → restaure."""
+        import json
+
+        from telephonia.config import get_default_messages
+
+        music_file = os.path.join(str(tmp_path), "ma_musique.mp3")
+        with open(music_file, "wb") as f:
+            f.write(b"\xff\xfb\x90\x00")
+
+        json_path = os.path.join(str(tmp_path), "messages.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump({"_music_path": music_file}, f)
+
+        original_output = state.output_dir
+        state.output_dir = str(tmp_path)
+        try:
+            state.music_path = None
+            state._music_path_from_json = False
+            state.messages = get_default_messages(music_path=None)
+            state.load_saved_messages()
+            assert state._music_path_from_json is True
+            assert state.music_path == music_file
+        finally:
+            state.output_dir = original_output
+
+
 class TestVoices:
     """Tests pour GET /api/voices et PUT /api/voice."""
 

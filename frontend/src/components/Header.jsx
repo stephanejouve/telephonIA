@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const PREFIX_RE = /^[a-zA-Z0-9_-]{0,64}$/;
 
-function Header({ prefix, onPrefixChange }) {
+function Header({ prefix, onPrefixChange, onOpenFAQ }) {
   const [quitting, setQuitting] = useState(false);
   const [localPrefix, setLocalPrefix] = useState(prefix ?? "");
   const [prefixError, setPrefixError] = useState(null);
@@ -44,6 +44,13 @@ function Header({ prefix, onPrefixChange }) {
 
   return (
     <div className="header">
+      <button
+        className="btn-faq"
+        onClick={onOpenFAQ}
+        title="Questions frequentes"
+      >
+        ?
+      </button>
       <button
         className="btn-quit"
         onClick={handleQuit}

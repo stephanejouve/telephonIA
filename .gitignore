@@ -38,5 +38,16 @@ src/telephonia/web/static/*
 scripts/ffmpeg/
 *.spec.bak
 
+# macOS build
+build/macos/
+macos/build/
+macos/dist/
+macos/*.app
+dist/*.dmg
+
+# Icon pipeline intermediates (les .icns/.ico generes sont commit, pas l'iconset)
+scripts/icons/AppIcon.iconset/
+
 # Environment
 .env
+macos/.eggs/
