@@ -23,13 +23,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Python semantic release
         id: release
         uses: python-semantic-release/python-semantic-release@v10
         with:
-          github_token: ${{ secrets.GH_TOKEN }}
+          # GITHUB_TOKEN auto-provisionne suffit : contents:write + id-token:write
+          # sont declares au niveau job, semantic-release peut bumper la version,
+          # pusher le tag et declencher l'evenement release.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: github-actions[bot]
+          git_committer_email: 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Publish GitHub Release
         if: steps.release.outputs.released == 'true'
@@ -44,6 +49,12 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      # id-token + attestations requis pour attest-build-provenance@v2 — genere
+      # une attestation SLSA signee Sigstore qui lie le .exe a ce workflow /
+      # commit. Verifiable via `gh attestation verify telephonIA-*.exe --repo
+      # stephanejouve/telephonIA` cote utilisateur.
+      id-token: write
+      attestations: write
     defaults:
       run:
         shell: bash
@@ -89,6 +100,11 @@ jobs:
 
       - name: Rename exe with version
         run: mv dist/telephonIA.exe "dist/telephonIA-${{ needs.release.outputs.version }}-windows.exe"
+
+      - name: Generate SLSA build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/telephonIA-${{ needs.release.outputs.version }}-windows.exe
 
       - name: Upload exe to GitHub Release
         env:

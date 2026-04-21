@@ -17,15 +17,23 @@ import requests
 PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
 FFMPEG_DIR = os.path.join(PROJECT_ROOT, "scripts", "ffmpeg")
 FFMPEG_EXE = os.path.join(FFMPEG_DIR, "ffmpeg.exe")
+FFPROBE_EXE = os.path.join(FFMPEG_DIR, "ffprobe.exe")
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+# Fichiers a extraire depuis l'archive gyan.dev — cible les 2 binaires exiges
+# par telephonIA.spec. pydub a besoin des DEUX : ffmpeg pour l'encodage,
+# ffprobe pour l'introspection (duree, codec, channels).
+FFMPEG_ARCHIVE_TARGETS = {
+    "bin/ffmpeg.exe": FFMPEG_EXE,
+    "bin/ffprobe.exe": FFPROBE_EXE,
+}
 SPEC_FILE = os.path.join(PROJECT_ROOT, "telephonIA.spec")
 DIST_DIR = os.path.join(PROJECT_ROOT, "dist")
 
 
 def download_ffmpeg():
-    """Telecharge et extrait ffmpeg.exe depuis gyan.dev."""
-    if os.path.exists(FFMPEG_EXE):
-        print(f"ffmpeg.exe deja present : {FFMPEG_EXE}")
+    """Telecharge et extrait ffmpeg.exe + ffprobe.exe depuis gyan.dev."""
+    if os.path.exists(FFMPEG_EXE) and os.path.exists(FFPROBE_EXE):
+        print(f"ffmpeg.exe + ffprobe.exe deja presents : {FFMPEG_DIR}")
         return
 
     print("Telechargement de ffmpeg...")
@@ -46,20 +54,25 @@ def download_ffmpeg():
                 print(f"\r  Progression : {pct}%", end="", flush=True)
     print()
 
-    print("Extraction de ffmpeg.exe...")
+    print("Extraction de ffmpeg.exe + ffprobe.exe...")
+    extracted = set()
     with zipfile.ZipFile(zip_path) as zf:
         for name in zf.namelist():
-            if name.endswith("bin/ffmpeg.exe"):
-                with zf.open(name) as src, open(FFMPEG_EXE, "wb") as dst:
-                    dst.write(src.read())
-                print(f"  Extrait : {FFMPEG_EXE}")
-                break
-        else:
-            print("ERREUR : ffmpeg.exe introuvable dans l'archive.")
-            sys.exit(1)
+            for suffix, dest in FFMPEG_ARCHIVE_TARGETS.items():
+                if name.endswith(suffix):
+                    with zf.open(name) as src, open(dest, "wb") as dst:
+                        dst.write(src.read())
+                    print(f"  Extrait : {dest}")
+                    extracted.add(suffix)
+                    break
+
+    missing = set(FFMPEG_ARCHIVE_TARGETS) - extracted
+    if missing:
+        print(f"ERREUR : binaires introuvables dans l'archive : {sorted(missing)}")
+        sys.exit(1)
 
     os.remove(zip_path)
-    print("ffmpeg.exe pret.")
+    print("ffmpeg.exe + ffprobe.exe prets.")
 
 
 def run_pyinstaller(console: bool = False):
@@ -116,6 +129,8 @@ def main():
         print(f"Plateforme : {platform.system()} (ffmpeg systeme utilise)")
         if not os.path.exists(FFMPEG_EXE):
             print("  Info : ffmpeg.exe absent (normal hors Windows)")
+        if not os.path.exists(FFPROBE_EXE):
+            print("  Info : ffprobe.exe absent (normal hors Windows)")
 
     run_pyinstaller(console=console)
     verify_output()
