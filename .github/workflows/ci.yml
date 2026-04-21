@@ -50,7 +50,7 @@ jobs:
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN_TELEPHONIA }}
+          token: ${{ secrets.CODECOV_TOKEN }}
           slug: stephanejouve/telephonIA
 
   # Vérifie que telephonIA.spec raise FileNotFoundError quand
