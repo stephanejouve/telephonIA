@@ -49,9 +49,7 @@ def _get_macos_bundle_dir() -> str:
 
 def _get_macos_data_dir() -> str:
     """Retourne ~/Library/Application Support/telephonIA/ (writable)."""
-    return os.path.join(
-        os.path.expanduser("~"), "Library", "Application Support", "telephonIA"
-    )
+    return os.path.join(os.path.expanduser("~"), "Library", "Application Support", "telephonIA")
 
 
 def get_project_root() -> str:

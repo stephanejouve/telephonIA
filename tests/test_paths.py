@@ -208,9 +208,7 @@ class TestPy2appPaths:
 
     BUNDLE_DIR = "/Applications/telephonIA.app/Contents/Resources/python_backend"
     EXECUTABLE = BUNDLE_DIR + "/telephonia-web"
-    DATA_DIR = os.path.join(
-        os.path.expanduser("~"), "Library", "Application Support", "telephonIA"
-    )
+    DATA_DIR = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "telephonIA")
 
     @patch.dict(os.environ, {"RESOURCEPATH": BUNDLE_DIR})
     @patch("telephonia.paths.sys")
