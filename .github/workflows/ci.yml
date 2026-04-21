@@ -46,10 +46,58 @@ jobs:
       - name: Run tests
         run: poetry run pytest tests/ -v --cov=telephonia --cov-report=term-missing --cov-report=xml
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage reports to Codecov
         if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
-          fail_ci_if_error: false
+          slug: stephanejouve/telephonIA
+
+  # Vérifie que telephonIA.spec raise FileNotFoundError quand
+  # scripts/ffmpeg/ est absent — régression de la classe du bug beta-test
+  # Windows (silent skip → .exe cassé). Le job échoue si pyinstaller réussit
+  # (= garde-fou absent) et réussit si il échoue avec le bon message.
+  spec-guardrail-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+      - name: Spec must raise on missing ffmpeg
+        shell: pwsh
+        run: |
+          if (Test-Path scripts/ffmpeg) {
+            Remove-Item -Recurse -Force scripts/ffmpeg
+          }
+          $out = pyinstaller --noconfirm --distpath dist-ci --workpath build-ci telephonIA.spec 2>&1
+          $code = $LASTEXITCODE
+          $out | Out-Host
+          if ($code -eq 0) {
+            Write-Error "pyinstaller a produit un .exe sans ffmpeg.exe — le garde-fou est cassé."
+            exit 1
+          }
+          if ($out -match "Binaires ffmpeg/ffprobe manquants") {
+            Write-Host "OK — garde-fou déclenché comme prévu."
+            exit 0
+          }
+          Write-Error "pyinstaller a échoué mais pas pour la bonne raison — revoir le spec."
+          exit 1
+
+  # Sanity py2app sur macOS : ffmpeg+ffprobe via brew puis --help-commands
+  # (parse le setup.py, pas de full build).
+  py2app-sanity-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ffmpeg + py2app
+        run: |
+          brew install ffmpeg
+          pip install py2app
+      - name: py2app config parse
+        run: python macos/py2app_setup.py --help-commands | head -20

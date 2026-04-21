@@ -69,3 +69,22 @@ token = { env = "GH_TOKEN" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/telephonia"]
+branch = true
+omit = [
+    "tests/*",
+    "scripts/*",
+    "macos/*",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true
+skip_covered = false
