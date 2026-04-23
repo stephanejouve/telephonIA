@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.1 (2026-04-23)
+
+### Bug Fixes
+
+- **bundle**: Detecte PyInstaller via _MEIPASS et logge la resolution ffmpeg
+  ([`d89fa52`](https://github.com/stephanejouve/telephonIA/commit/d89fa52e0c460c780772c8b6037cc204d894d850))
+
+
 ## v1.7.0 (2026-04-21)
 
 ### Bug Fixes
