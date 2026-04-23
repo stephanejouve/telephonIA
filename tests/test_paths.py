@@ -190,15 +190,20 @@ class TestDetectionHelpers:
 
     @patch("telephonia.paths.sys")
     def test_pyinstaller(self, mock_sys):
-        """PyInstaller met sys.frozen = True."""
+        """PyInstaller met sys.frozen = True et sys._MEIPASS."""
         mock_sys.frozen = True
+        mock_sys._MEIPASS = "/tmp/pyinstaller_bundle"
         assert _is_pyinstaller()
         assert not _is_py2app()
 
     @patch("telephonia.paths.sys")
     def test_py2app(self, mock_sys):
-        """py2app met sys.frozen = 'macosx_app'."""
+        """py2app met sys.frozen = 'macosx_app' mais pas sys._MEIPASS."""
         mock_sys.frozen = "macosx_app"
+        # MagicMock auto-cree les attributs ; on supprime explicitement _MEIPASS
+        # pour refleter le vrai environnement py2app qui n'a pas cet attribut
+        # (propre au bootloader PyInstaller).
+        del mock_sys._MEIPASS
         assert _is_py2app()
         assert not _is_pyinstaller()
 

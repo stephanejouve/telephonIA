@@ -6,8 +6,18 @@ import sys
 
 
 def _is_pyinstaller() -> bool:
-    """Detecte un contexte PyInstaller (Windows .exe)."""
-    return getattr(sys, "frozen", False) is True
+    """Detecte un contexte PyInstaller (Windows .exe).
+
+    Utilise `hasattr(sys, "_MEIPASS")` comme source de verite : cet attribut
+    est defini uniquement par le bootloader PyInstaller au runtime, alors
+    que l'ancien check `sys.frozen is True` peut tomber en false negative
+    selon la version PyInstaller ou si `sys.frozen` n'est pas strictement
+    le bool singleton. Consequence du bug historique : `get_ffmpeg_path()`
+    retournait "ffmpeg" (fallback dev) au lieu du chemin MEIPASS, et pydub
+    finissait par cracher avec `[WinError 2] Le fichier specifie est
+    introuvable` malgre des binaires correctement embarques dans le bundle.
+    """
+    return hasattr(sys, "_MEIPASS")
 
 
 def _is_py2app() -> bool:

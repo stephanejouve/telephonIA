@@ -2,6 +2,7 @@
 
 import os
 import socket
+import sys
 import webbrowser
 
 import uvicorn
@@ -49,12 +50,34 @@ def _configure_ffmpeg():
     le PATH systeme — rien a configurer. En bundle, on pointe AudioSegment
     vers les binaires embarques (ffmpeg.exe + ffprobe.exe sur Windows,
     ffmpeg + ffprobe sur macOS).
+
+    Le bloc diagnostique (print) est volontairement verbose : lors du bug
+    WinError 2 dans la 1.7.0 l'echec etait invisible — aucune info sur le
+    path resolu ni sur l'existence du binaire embarque. Garder ces logs
+    permet a tout utilisateur final de nous remonter en une capture d'ecran
+    la cause racine au prochain defaut.
     """
-    if get_ffmpeg_path() != "ffmpeg":
+    ffmpeg_path = get_ffmpeg_path()
+    ffprobe_path = get_ffprobe_path()
+    print(
+        f"[ffmpeg] sys.frozen={getattr(sys, 'frozen', None)} "
+        f"_MEIPASS={getattr(sys, '_MEIPASS', None)}",
+        flush=True,
+    )
+    print(
+        f"[ffmpeg] converter={ffmpeg_path} (exists={os.path.exists(ffmpeg_path)})",
+        flush=True,
+    )
+    print(
+        f"[ffmpeg] ffprobe={ffprobe_path} (exists={os.path.exists(ffprobe_path)})",
+        flush=True,
+    )
+
+    if ffmpeg_path != "ffmpeg":
         from pydub import AudioSegment
 
-        AudioSegment.converter = get_ffmpeg_path()
-        AudioSegment.ffprobe = get_ffprobe_path()
+        AudioSegment.converter = ffmpeg_path
+        AudioSegment.ffprobe = ffprobe_path
 
 
 def main():
