@@ -15,9 +15,9 @@ from telephonia.web.app import create_app
 
 @pytest.fixture
 def client():
-    """Client de test FastAPI."""
+    """Client de test FastAPI, depuis le poste du technicien (#38)."""
     app = create_app()
-    return TestClient(app)
+    return TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 50000))
 
 
 @pytest.fixture(autouse=True)
