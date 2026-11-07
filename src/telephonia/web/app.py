@@ -12,11 +12,19 @@ from fastapi.staticfiles import StaticFiles
 from telephonia.paths import get_ffmpeg_path, get_ffprobe_path, get_static_dir
 from telephonia.web.api import router
 from telephonia.web.middleware import LoggingMiddleware
+from telephonia.web.session import SessionGate, SessionMiddleware
 
 
-def create_app() -> FastAPI:
-    """Cree et configure l'application FastAPI."""
+def create_app(gate: SessionGate | None = None) -> FastAPI:
+    """Cree et configure l'application FastAPI.
+
+    ``gate`` porte le code de session du lancement (#38) ; un nouveau est tire
+    s'il n'est pas fourni, et reste lisible dans ``app.state.session``.
+    """
     app = FastAPI(title="telephonIA", version="0.1.0")
+    app.state.session = gate or SessionGate()
+    # Ajoute avant le logging, donc en dessous : les 401 et 403 sont logues aussi
+    app.add_middleware(SessionMiddleware, gate=app.state.session)
     app.add_middleware(LoggingMiddleware)
     app.include_router(router)
 
@@ -86,8 +94,10 @@ def main():
     port = find_free_port()
     lan_ip = get_lan_ip()
 
+    gate = SessionGate()
     local_url = f"http://localhost:{port}"
-    lan_url = f"http://{lan_ip}:{port}"
+    # Le poste du technicien n'a pas besoin du code ; une machine du reseau, si (#38)
+    lan_url = f"http://{lan_ip}:{port}/?code={gate.code}"
 
     # Protocole pour l'app macOS Swift : lit cette ligne sur stdout
     print(f"PORT:{port}", flush=True)
@@ -96,12 +106,13 @@ def main():
     print("=" * 50)
     print(f"  Local : {local_url}")
     print(f"  LAN   : {lan_url}")
+    print(f"  Code  : {gate.code} (change a chaque lancement)")
     print("=" * 50)
 
     if not os.environ.get("TELEPHONIA_APP_MODE"):
         webbrowser.open(local_url)
 
-    app = create_app()
+    app = create_app(gate)
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 
